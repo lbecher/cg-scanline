@@ -1,7 +1,10 @@
 use bevy::{
     prelude::*,
     window::PrimaryWindow,
-    sprite::MaterialMesh2dBundle,
+    sprite::{
+        Material2d,
+        MaterialMesh2dBundle,
+    },
 };
 use bevy_egui::EguiContexts;
 use std::cmp::Ordering;
@@ -19,8 +22,15 @@ impl Plugin for TrianglesPlugin {
     }
 }
 
+pub enum VertexOrder {
+    First,
+    Middle,
+    Last,
+    Indifferent,
+}
+
 #[derive(Component)]
-pub struct VertexSelector;
+pub struct VertexSelector(pub VertexOrder);
 
 #[derive(Debug, Clone)]
 pub struct Vertex {
@@ -42,7 +52,8 @@ fn associate_functions(
     mut ui_state: ResMut<UIState>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    triangles_query: Query<(Entity, &Triangle)>,
+    mut triangles_query: Query<(Entity, &mut Triangle)>,
+    mut vertex_selector_query: Query<(Entity, &VertexSelector, &mut Transform)>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
     let ctx = egui_contexts.ctx_mut();
@@ -63,20 +74,20 @@ fn associate_functions(
                             let color: [f32; 3] = ui_state.color_picker.clone();
         
                             commands.spawn((
-                                VertexSelector,
+                                VertexSelector(VertexOrder::Indifferent),
                                 MaterialMesh2dBundle {
                                     mesh: meshes.add(shape::Circle::new(8.0).into()).into(),
                                     material: materials.add(ColorMaterial::from(Color::WHITE)),
                                     transform: Transform::from_translation(Vec3::new(
                                         position[0],
                                         position[1], 
-                                        position[2] + 10.0 * vertex_index,
+                                        position[2] + 2.0 * vertex_index,
                                     )),
                                     ..default()
                                 },
                             ));
                             commands.spawn((
-                                VertexSelector,
+                                VertexSelector(VertexOrder::Indifferent),
                                 MaterialMesh2dBundle {
                                     mesh: meshes.add(shape::Circle::new(7.0).into()).into(),
                                     material: materials.add(ColorMaterial::from(Color::Rgba { 
@@ -88,7 +99,7 @@ fn associate_functions(
                                     transform: Transform::from_translation(Vec3::new(
                                         position[0],
                                         position[1], 
-                                        position[2] + 10.0 * vertex_index + 1.0,
+                                        position[2] + 2.0 * vertex_index + 1.0,
                                     )),
                                     ..default()
                                 },
@@ -114,13 +125,156 @@ fn associate_functions(
 
                     ui_state.function = Some(Function::Modify(Some(entity)));
 
+                    for (entity, _, _) in vertex_selector_query.iter() {
+                        commands.entity(entity).despawn();
+                    }
+
                     println!("{:?}", sorted_triangle);
                 }
             }
             Function::Modify(entity) => {
                 match entity {
                     Some(entity) => {
-                        
+                        let triangle = commands.entity(*entity);
+                        if !ui_state.vertex_selectors_spawned {
+                            let (_, mut triangle) = triangles_query.get_mut(*entity).unwrap();
+                            commands.spawn((
+                                VertexSelector(VertexOrder::First),
+                                MaterialMesh2dBundle {
+                                    mesh: meshes.add(shape::Circle::new(8.0).into()).into(),
+                                    material: materials.add(ColorMaterial::from(Color::WHITE)),
+                                    transform: Transform::from_translation(Vec3::new(
+                                        triangle.first.position[0],
+                                        triangle.first.position[1], 
+                                        95.0,
+                                    )),
+                                    ..default()
+                                },
+                            ));
+                            commands.spawn((
+                                VertexSelector(VertexOrder::First),
+                                MaterialMesh2dBundle {
+                                    mesh: meshes.add(shape::Circle::new(7.0).into()).into(),
+                                    material: materials.add(ColorMaterial::from(Color::Rgba { 
+                                        red: triangle.first.color[0], 
+                                        green: triangle.first.color[1], 
+                                        blue: triangle.first.color[2], 
+                                        alpha: 1.0, 
+                                    })),
+                                    transform: Transform::from_translation(Vec3::new(
+                                        triangle.first.position[0],
+                                        triangle.first.position[1],
+                                        96.0,
+                                    )),
+                                    ..default()
+                                },
+                            ));
+
+                            commands.spawn((
+                                VertexSelector(VertexOrder::Middle),
+                                MaterialMesh2dBundle {
+                                    mesh: meshes.add(shape::Circle::new(8.0).into()).into(),
+                                    material: materials.add(ColorMaterial::from(Color::WHITE)),
+                                    transform: Transform::from_translation(Vec3::new(
+                                        triangle.middle.position[0],
+                                        triangle.middle.position[1],
+                                        97.0,
+                                    )),
+                                    ..default()
+                                },
+                            ));
+                            commands.spawn((
+                                VertexSelector(VertexOrder::Middle),
+                                MaterialMesh2dBundle {
+                                    mesh: meshes.add(shape::Circle::new(7.0).into()).into(),
+                                    material: materials.add(ColorMaterial::from(Color::Rgba { 
+                                        red: triangle.middle.color[0], 
+                                        green: triangle.middle.color[1], 
+                                        blue: triangle.middle.color[2], 
+                                        alpha: 1.0, 
+                                    })),
+                                    transform: Transform::from_translation(Vec3::new(
+                                        triangle.middle.position[0],
+                                        triangle.middle.position[1],
+                                        98.0,
+                                    )),
+                                    ..default()
+                                },
+                            ));
+
+                            commands.spawn((
+                                VertexSelector(VertexOrder::Last),
+                                MaterialMesh2dBundle {
+                                    mesh: meshes.add(shape::Circle::new(8.0).into()).into(),
+                                    material: materials.add(ColorMaterial::from(Color::WHITE)),
+                                    transform: Transform::from_translation(Vec3::new(
+                                        triangle.last.position[0],
+                                        triangle.last.position[1],
+                                        99.0,
+                                    )),
+                                    ..default()
+                                },
+                            ));
+                            commands.spawn((
+                                VertexSelector(VertexOrder::Last),
+                                MaterialMesh2dBundle {
+                                    mesh: meshes.add(shape::Circle::new(7.0).into()).into(),
+                                    material: materials.add(ColorMaterial::from(Color::Rgba { 
+                                        red: triangle.last.color[0], 
+                                        green: triangle.last.color[1], 
+                                        blue: triangle.last.color[2], 
+                                        alpha: 1.0, 
+                                    })),
+                                    transform: Transform::from_translation(Vec3::new(
+                                        triangle.last.position[0],
+                                        triangle.last.position[1],
+                                        100.0,
+                                    )),
+                                    ..default()
+                                },
+                            ));
+                            
+                            ui_state.vertex_selectors_spawned = true;
+                        } else {
+                            if input.just_pressed(MouseButton::Right) && !(ctx.is_using_pointer() || ctx.is_pointer_over_area()) {
+                                if let Some(cursor_position) = window.cursor_position() {
+                                    for (_, vertex_selector, transform) in vertex_selector_query.iter() {
+                                        let x_difference = cursor_position.x - transform.translation.x;
+                                        let y_difference = (window.height() - cursor_position.y) - transform.translation.y;
+
+                                        if x_difference.abs() < 8.0 || y_difference.abs() < 8.0 {
+                                            let (_, mut triangle) = triangles_query.get_mut(*entity).unwrap();
+                                            match vertex_selector.0 {
+                                                VertexOrder::First => {
+                                                    triangle.first.color = ui_state.color_picker;
+                                                }
+                                                VertexOrder::Middle => {
+                                                    triangle.middle.color = ui_state.color_picker;
+                                                }
+                                                VertexOrder::Last => {
+                                                    triangle.last.color = ui_state.color_picker;
+                                                }
+                                                VertexOrder::Indifferent => {}
+                                            }
+                                            for (entity, _, _) in vertex_selector_query.iter() {
+                                                commands.entity(entity).despawn();
+                                            }
+                                            ui_state.vertex_selectors_spawned = false;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            if input.pressed(MouseButton::Left) && !(ctx.is_using_pointer() || ctx.is_pointer_over_area()) {
+                                if let Some(cursor_position) = window.cursor_position() {
+                                    
+                                    
+
+
+                                    
+                                }
+                            }
+                        }
                     }
                     None => {
                         if input.just_pressed(MouseButton::Left) && !(ctx.is_using_pointer() || ctx.is_pointer_over_area()) {

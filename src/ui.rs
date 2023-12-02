@@ -28,6 +28,7 @@ pub struct UIState {
     pub selected_triangle: Option<usize>,
     pub color_picker: [f32; 3],
     pub new_triangle: Vec<Vertex>,
+    pub vertex_selectors_spawned: bool,
 }
 
 fn setup_ui_state(
@@ -38,6 +39,7 @@ fn setup_ui_state(
         selected_triangle: None,
         color_picker: [1.0, 1.0, 1.0],
         new_triangle: Vec::new(),
+        vertex_selectors_spawned: false,
     });
 }
 
@@ -45,7 +47,7 @@ fn update_ui(
     mut commands: Commands,
     mut contexts: EguiContexts,
     mut ui_state: ResMut<UIState>,
-    mut vertex_selector_query: Query<(Entity, &VertexSelector)>,
+    vertex_selector_query: Query<(Entity, &VertexSelector)>,
 ) {
     egui::Window::new("Opções")
         .fixed_size([150.0, 200.0])
@@ -53,7 +55,7 @@ fn update_ui(
             if let Some(function) = &ui_state.function {
                 match *function {
                     Function::Create => {
-                        ui.label("Toque ou clique para adicionar pontos.");
+                        ui.label("Clique para adicionar pontos.");
                         ui.horizontal( |ui| {
                             ui.label("Cor:");
                             ui.color_edit_button_rgb(&mut ui_state.color_picker);
@@ -69,6 +71,11 @@ fn update_ui(
                     Function::Modify(entity) => {
                         if let Some(entity) = entity {
                             ui.label(format!("Você está editando o triângulo {:?}", entity));
+                            ui.label("Clique com o botão direito para atribuir a cor.");
+                            ui.horizontal( |ui| {
+                                ui.label("Cor:");
+                                ui.color_edit_button_rgb(&mut ui_state.color_picker);
+                            });
                         } else {
                             ui.label("Selecione um triângulo.");
                         }
@@ -77,6 +84,7 @@ fn update_ui(
                             for (entity, _) in vertex_selector_query.iter() {
                                 commands.entity(entity).despawn();
                             }
+                            ui_state.vertex_selectors_spawned = false;
                             ui_state.function = None;
                         }
                     },
