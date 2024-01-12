@@ -1,3 +1,4 @@
+mod state;
 mod camera;
 mod triangles;
 mod ui;
@@ -10,8 +11,9 @@ use bevy_egui::EguiPlugin;
 
 use crate::{
     camera::CameraPlugin,
-    ui::UIPlugin,
+    state::StatePlugin,
     triangles::TrianglesPlugin,
+    ui::UIPlugin,
 };
 
 fn main() {
@@ -31,6 +33,7 @@ fn main() {
         )
         .add_plugins(CameraPlugin)
         .add_plugins(EguiPlugin)
+        .add_plugins(StatePlugin)
         .add_plugins(UIPlugin)
         .add_plugins(TrianglesPlugin)
         .run();

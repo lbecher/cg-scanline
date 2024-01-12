@@ -1,27 +1,26 @@
 use bevy::{
     prelude::*,
     window::PrimaryWindow,
-    sprite::{
-        Material2d,
-        MaterialMesh2dBundle,
-    },
 };
 use bevy_egui::EguiContexts;
 use std::cmp::Ordering;
 
-use crate::ui::Function;
-use crate::ui::UIState;
+use crate::state::{
+    Function,
+    State,
+};
 
 pub struct TrianglesPlugin;
 
 impl Plugin for TrianglesPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(Update, associate_functions)
-            .add_systems(Update, draw_triangles);
+            .add_systems(Update, creating)
+            .add_systems(Update, modifying);
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum VertexOrder {
     First,
     Middle,
@@ -43,9 +42,186 @@ pub struct Triangle {
     pub first: Vertex,
     pub middle: Vertex,
     pub last: Vertex,
+    pub redraw: bool,
 }
 
-fn associate_functions(
+fn creating(
+    mut commands: Commands,
+    mut egui_contexts: EguiContexts,
+    input: Res<Input<MouseButton>>,
+    mut state: ResMut<State>,
+    vertex_selector_query: Query<(Entity, &VertexSelector)>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    if let Function::Create = state.function {
+        let window = window_query.single();
+        let ctx = egui_contexts.ctx_mut();
+
+        if state.new_triangle.len() < 3 {
+            if input.just_pressed(MouseButton::Left) && !(ctx.is_using_pointer() || ctx.is_pointer_over_area()) {
+                for (entity, _) in vertex_selector_query.iter() {
+                    commands.entity(entity).despawn();
+                }
+
+                if let Some(cursor_position) = window.cursor_position() {
+                    let position: [f32; 3] = [
+                        cursor_position.x,
+                        window.height() - cursor_position.y,
+                        10.0,
+                    ];
+                    let color: [f32; 3] = state.color_picker.clone();
+
+                    state.new_triangle.push(Vertex {
+                        position,
+                        color,
+                    });
+                    state.spawn_vertex_selectors = true;
+                }
+            }
+        }
+        
+        else {
+            for (entity, _) in vertex_selector_query.iter() {
+                commands.entity(entity).despawn();
+            }
+
+            let mut sorted_triangle = state.new_triangle.clone();
+            sorted_triangle.sort_by(|a, b| a.position[0].partial_cmp(&b.position[0]).unwrap_or(Ordering::Equal));
+
+            let entity = commands.spawn(Triangle {
+                first: sorted_triangle[0].clone(),
+                middle: sorted_triangle[1].clone(),
+                last: sorted_triangle[2].clone(),
+                redraw: true,
+            }).id();
+
+            state.function = Function::Modify(entity);
+            state.new_triangle.clear();
+        }
+    }
+}
+
+
+fn modifying(
+    mut commands: Commands,
+    mut egui_contexts: EguiContexts,
+    input: Res<Input<MouseButton>>,
+    mut state: ResMut<State>,
+    mut triangles_query: Query<(Entity, &mut Triangle)>,
+    vertex_selector_query: Query<(Entity, &VertexSelector, &Transform)>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    if let Function::Modify(entity) = state.function {
+        let window = window_query.single();
+        let ctx = egui_contexts.ctx_mut();
+
+        if input.just_pressed(MouseButton::Right) && !(ctx.is_using_pointer() || ctx.is_pointer_over_area()) {
+            if let Some(cursor_position) = window.cursor_position() {
+                for (_, vertex_selector, transform) in vertex_selector_query.iter() {
+                    let x_difference = cursor_position.x - transform.translation.x;
+                    let y_difference = (window.height() - cursor_position.y) - transform.translation.y;
+
+                    if x_difference.abs() < 8.0 && y_difference.abs() < 8.0 {
+                        let (_, mut triangle) = triangles_query.get_mut(entity).unwrap();
+
+                        match vertex_selector.0 {
+                            VertexOrder::First => {
+                                triangle.first.color = state.color_picker;
+                            }
+                            VertexOrder::Middle => {
+                                triangle.middle.color = state.color_picker;
+                            }
+                            VertexOrder::Last => {
+                                triangle.last.color = state.color_picker;
+                            }
+                            VertexOrder::Indifferent => {}
+                        }
+
+                        for (entity, _, _) in vertex_selector_query.iter() {
+                            commands.entity(entity).despawn();
+                        }
+                        state.spawn_vertex_selectors = true;
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        if input.just_pressed(MouseButton::Left) && !(ctx.is_using_pointer() || ctx.is_pointer_over_area()) {
+            if let Some(cursor_position) = window.cursor_position() {
+                let (_, mut triangle) = triangles_query.get_mut(entity).unwrap();
+
+                if let Some(selected_vertex) = state.selected_vertex.clone() {
+                    match selected_vertex {
+                        VertexOrder::First => {
+                            triangle.first.position[0] = cursor_position.x;
+                            triangle.first.position[1] = window.height() - cursor_position.y;
+                        }
+                        VertexOrder::Middle => {
+                            triangle.middle.position[0] = cursor_position.x;
+                            triangle.middle.position[1] = window.height() - cursor_position.y;
+                        }
+                        VertexOrder::Last => {
+                            triangle.last.position[0] = cursor_position.x;
+                            triangle.last.position[1] = window.height() - cursor_position.y;
+                        }
+                        VertexOrder::Indifferent => {}
+                    };
+
+                    let mut vertices: [Vertex; 3] = [
+                        triangle.first.clone(),
+                        triangle.middle.clone(),
+                        triangle.last.clone(),
+                    ];
+
+                    vertices.sort_by(|a, b| a.position[0].partial_cmp(&b.position[0]).unwrap_or(Ordering::Equal));
+                    
+                    triangle.first = vertices[0].clone();
+                    triangle.middle = vertices[1].clone();
+                    triangle.last = vertices[2].clone();
+                    triangle.redraw = true;
+
+                    for (entity, _, _) in vertex_selector_query.iter() {
+                        commands.entity(entity).despawn();
+                    }
+                    state.spawn_vertex_selectors = true;
+                    state.selected_vertex = None;
+                }
+                
+                else {
+                    let x_difference = cursor_position.x - triangle.first.position[0];
+                    let y_difference = (window.height() - cursor_position.y) - triangle.first.position[1];
+
+                    if x_difference.abs() < 8.0 && y_difference.abs() < 8.0 {
+                        state.selected_vertex = Some(VertexOrder::First);
+                    }
+
+                    let x_difference = cursor_position.x - triangle.middle.position[0];
+                    let y_difference = (window.height() - cursor_position.y) - triangle.middle.position[1];
+
+                    if x_difference.abs() < 8.0 && y_difference.abs() < 8.0 {
+                        state.selected_vertex = Some(VertexOrder::Middle);
+                    }
+
+                    let x_difference = cursor_position.x - triangle.last.position[0];
+                    let y_difference = (window.height() - cursor_position.y) - triangle.last.position[1];
+
+                    if x_difference.abs() < 8.0 && y_difference.abs() < 8.0 {
+                        state.selected_vertex = Some(VertexOrder::Last);
+                    }
+
+                    for (entity, _, _) in vertex_selector_query.iter() {
+                        commands.entity(entity).despawn();
+                    }
+                    state.spawn_vertex_selectors = true;
+                }
+            }
+        }
+    }
+}
+
+/*fn associate_functions(
     mut commands: Commands,
     mut egui_contexts: EguiContexts,
     input: Res<Input<MouseButton>>,
@@ -121,6 +297,7 @@ fn associate_functions(
                         first: sorted_triangle[0].clone(),
                         middle: sorted_triangle[1].clone(),
                         last: sorted_triangle[2].clone(),
+                        redraw: true,
                     }).id();
 
                     ui_state.function = Some(Function::Modify(Some(entity)));
@@ -242,7 +419,7 @@ fn associate_functions(
                                         let x_difference = cursor_position.x - transform.translation.x;
                                         let y_difference = (window.height() - cursor_position.y) - transform.translation.y;
 
-                                        if x_difference.abs() < 8.0 || y_difference.abs() < 8.0 {
+                                        if x_difference.abs() < 8.0 && y_difference.abs() < 8.0 {
                                             let (_, mut triangle) = triangles_query.get_mut(*entity).unwrap();
                                             match vertex_selector.0 {
                                                 VertexOrder::First => {
@@ -267,11 +444,55 @@ fn associate_functions(
                             }
                             if input.pressed(MouseButton::Left) && !(ctx.is_using_pointer() || ctx.is_pointer_over_area()) {
                                 if let Some(cursor_position) = window.cursor_position() {
-                                    
-                                    
+                                    for (_, mut triangle) in triangles_query.iter_mut() {
+                                        let x_difference = cursor_position.x - triangle.first.position[0];
+                                        let y_difference = (window.height() - cursor_position.y) - triangle.first.position[1];
 
+                                        if x_difference.abs() < 8.0 && y_difference.abs() < 8.0 {
+                                            for (_, vertex_selector, mut transform) in vertex_selector_query.iter_mut() {
+                                                if let VertexOrder::First = vertex_selector.0 {
+                                                    transform.translation.x = cursor_position.x;
+                                                    transform.translation.y = window.height() - cursor_position.y;
+                                                }
+                                            }
+                                            triangle.first.position[0] = cursor_position.x;
+                                            triangle.first.position[1] = window.height() - cursor_position.y;
+                                            triangle.redraw = true;
+                                            break;
+                                        }
 
-                                    
+                                        let x_difference = cursor_position.x - triangle.middle.position[0];
+                                        let y_difference = (window.height() - cursor_position.y) - triangle.middle.position[1];
+
+                                        if x_difference.abs() < 8.0 && y_difference.abs() < 8.0 {
+                                            for (_, vertex_selector, mut transform) in vertex_selector_query.iter_mut() {
+                                                if let VertexOrder::Middle = vertex_selector.0 {
+                                                    transform.translation.x = cursor_position.x;
+                                                    transform.translation.y = window.height() - cursor_position.y;
+                                                }
+                                            }
+                                            triangle.middle.position[0] = cursor_position.x;
+                                            triangle.middle.position[1] = window.height() - cursor_position.y;
+                                            triangle.redraw = true;
+                                            break;
+                                        }
+
+                                        let x_difference = cursor_position.x - triangle.last.position[0];
+                                        let y_difference = (window.height() - cursor_position.y) - triangle.last.position[1];
+
+                                        if x_difference.abs() < 8.0 && y_difference.abs() < 8.0 {
+                                            for (_, vertex_selector, mut transform) in vertex_selector_query.iter_mut() {
+                                                if let VertexOrder::Last = vertex_selector.0 {
+                                                    transform.translation.x = cursor_position.x;
+                                                    transform.translation.y = window.height() - cursor_position.y;
+                                                }
+                                            }
+                                            triangle.last.position[0] = cursor_position.x;
+                                            triangle.last.position[1] = window.height() - cursor_position.y;
+                                            triangle.redraw = true;
+                                            break;
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -292,7 +513,7 @@ fn associate_functions(
             }
         }
     }
-}
+}*/
 
 fn draw_triangles(
     triangles_query: Query<&Triangle>,
