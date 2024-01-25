@@ -17,6 +17,7 @@ impl Plugin for TrianglesPlugin {
         app
             .add_systems(Update, creating)
             .add_systems(Update, modifying)
+            .add_systems(Update, redrawing)
             .add_systems(Update, selecting);
     }
 }
@@ -52,12 +53,16 @@ fn creating(
     mut egui_contexts: EguiContexts,
     input: Res<Input<MouseButton>>,
     mut state: ResMut<State>,
-    vertex_selector_query: Query<(Entity, &VertexSelector)>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
     if let Function::Create = state.function {
         let window = window_query.single();
         let ctx = egui_contexts.ctx_mut();
+
+        // --------------------
+        // se nem todos os vértices tiverem sido definidos,
+        // adiciona-se os pontos de clique no vetor new_triangle
+        // --------------------
 
         if state.new_triangle.len() < 3 {
             if input.just_pressed(MouseButton::Left) && !(ctx.is_using_pointer() || ctx.is_pointer_over_area()) {
@@ -74,13 +79,15 @@ fn creating(
                         color,
                     });
 
-                    for (entity, _) in vertex_selector_query.iter() {
-                        commands.entity(entity).despawn();
-                    }
                     state.spawn_vertex_selectors = true;
                 }
             }
         }
+
+        // --------------------
+        // quando todos os vértices já tiverem sido criados,
+        // spawnamos o triângulo com suas informações
+        // --------------------
         
         else {
             let mut sorted_triangle = state.new_triangle.clone();
@@ -95,18 +102,12 @@ fn creating(
 
             state.function = Function::Modify(entity);
             state.new_triangle.clear();
-
-            for (entity, _) in vertex_selector_query.iter() {
-                commands.entity(entity).despawn();
-            }
-            state.spawn_vertex_selectors = true;
         }
     }
 }
 
 
 fn modifying(
-    mut commands: Commands,
     mut egui_contexts: EguiContexts,
     input: Res<Input<MouseButton>>,
     mut state: ResMut<State>,
@@ -140,9 +141,6 @@ fn modifying(
                             VertexOrder::Indifferent => {}
                         }
 
-                        for (entity, _, _) in vertex_selector_query.iter() {
-                            commands.entity(entity).despawn();
-                        }
                         state.spawn_vertex_selectors = true;
 
                         break;
@@ -185,9 +183,6 @@ fn modifying(
                     triangle.last = vertices[2].clone();
                     triangle.redraw = true;
 
-                    for (entity, _, _) in vertex_selector_query.iter() {
-                        commands.entity(entity).despawn();
-                    }
                     state.spawn_vertex_selectors = true;
                     state.selected_vertex = None;
                 }
@@ -215,13 +210,25 @@ fn modifying(
                     }
 
                     if state.selected_vertex.is_some() {
-                        for (entity, _, _) in vertex_selector_query.iter() {
-                            commands.entity(entity).despawn();
-                        }
                         state.spawn_vertex_selectors = true;
                     }
                 }
             }
+        }
+    }
+}
+
+
+fn redrawing(
+    mut egui_contexts: EguiContexts,
+    input: Res<Input<MouseButton>>,
+    mut state: ResMut<State>,
+    mut triangles_query: Query<&mut Triangle>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    for triangle in triangles_query.iter_mut() {
+        if triangle.redraw {
+
         }
     }
 }

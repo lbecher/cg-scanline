@@ -97,8 +97,13 @@ fn spawn_vertex_selectors(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     triangles_query: Query<&Triangle>,
+    vertex_selector_query: Query<Entity, With<VertexSelector>>,
 ) {
     if state.spawn_vertex_selectors {
+        for entity in vertex_selector_query.iter() {
+            commands.entity(entity).despawn();
+        }
+
         match state.function {
             
             // Spawna seletores de vértice para o triângulo em criação
