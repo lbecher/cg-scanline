@@ -4,7 +4,6 @@ use bevy::{
     window::PrimaryWindow,
 };
 use bevy_egui::EguiContexts;
-use std::cmp::Ordering;
 
 use crate::state::{
     Function,
@@ -28,7 +27,6 @@ pub enum VertexOrder {
     First,
     Middle,
     Last,
-    Indifferent,
 }
 
 #[derive(Component)]
@@ -46,10 +44,11 @@ pub struct Triangle {
     pub middle: Vertex,
     pub last: Vertex,
     pub redraw: bool,
+    pub index: usize,
 }
 
 #[derive(Component)]
-pub struct TriangleSprite(Option<Entity>);
+pub struct TriangleSprite(pub Option<Entity>);
 
 
 fn creating(
@@ -65,7 +64,7 @@ fn creating(
 
         // --------------------
         // se nem todos os vértices tiverem sido definidos,
-        // adiciona-se os pontos de clique no vetor new_triangle
+        // adiciona os pontos de clique no vetor new_triangle
         // --------------------
 
         if state.new_triangle.len() < 3 {
@@ -90,25 +89,24 @@ fn creating(
 
         // --------------------
         // quando todos os vértices já tiverem sido criados,
-        // spawnamos o triângulo com suas informações
+        // spawna o triângulo com suas informações
         // --------------------
         
         else {
-            let mut sorted_triangle = state.new_triangle.clone();
-            sorted_triangle.sort_by(|a, b| a.position[0].partial_cmp(&b.position[0]).unwrap_or(Ordering::Equal));
-
             let entity = commands.spawn((
                 Triangle {
-                    first: sorted_triangle[0].clone(),
-                    middle: sorted_triangle[1].clone(),
-                    last: sorted_triangle[2].clone(),
+                    first: state.new_triangle.remove(0),
+                    middle: state.new_triangle.remove(0),
+                    last: state.new_triangle.remove(0),
                     redraw: true,
+                    index: state.triangles_count,
                 },
                 TriangleSprite(None),
             )).id();
 
             state.function = Function::Modify(entity);
             state.new_triangle.clear();
+            state.triangles_count += 1;
         }
     }
 }
@@ -125,6 +123,12 @@ fn modifying(
     if let Function::Modify(entity) = state.function {
         let window = window_query.single();
         let ctx = egui_contexts.ctx_mut();
+
+        // --------------------
+        // quando o botão direito do mouse for pressionado,
+        // a cor no color picker será atribuída a um vértice
+        // que esteja a 8 pixels de distância do clique
+        // --------------------
 
         if input.just_pressed(MouseButton::Right) && !(ctx.is_using_pointer() || ctx.is_pointer_over_area()) {
             if let Some(cursor_position) = window.cursor_position() {
@@ -148,7 +152,6 @@ fn modifying(
                                 triangle.last.color = state.color_picker;
                                 triangle.redraw = true;
                             }
-                            VertexOrder::Indifferent => {}
                         }
 
                         state.spawn_vertex_selectors = true;
@@ -158,6 +161,13 @@ fn modifying(
                 }
             }
         }
+
+        // --------------------
+        // quando o botão esquerdo do mouse for pressionado pela primeira vez,
+        // um vértice que esteja a no máximo 8 pixels de distância do clique será selecionado.
+        // quando o botão esquerdo do mouse for pressionado pela segunda vez,
+        // o vértice selecionado será deslocado para a posição do clique.
+        // --------------------
 
         if input.just_pressed(MouseButton::Left) && !(ctx.is_using_pointer() || ctx.is_pointer_over_area()) {
             if let Some(cursor_position) = window.cursor_position() {
@@ -177,20 +187,8 @@ fn modifying(
                             triangle.last.position[0] = cursor_position.x;
                             triangle.last.position[1] = window.height() - cursor_position.y;
                         }
-                        VertexOrder::Indifferent => {}
                     };
 
-                    let mut vertices: [Vertex; 3] = [
-                        triangle.first.clone(),
-                        triangle.middle.clone(),
-                        triangle.last.clone(),
-                    ];
-
-                    vertices.sort_by(|a, b| a.position[0].partial_cmp(&b.position[0]).unwrap_or(Ordering::Equal));
-                    
-                    triangle.first = vertices[0].clone();
-                    triangle.middle = vertices[1].clone();
-                    triangle.last = vertices[2].clone();
                     triangle.redraw = true;
 
                     state.spawn_vertex_selectors = true;

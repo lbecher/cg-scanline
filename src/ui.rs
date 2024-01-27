@@ -13,9 +13,7 @@ use crate::{
         State,
     },
     triangles::{
-        Triangle,
-        VertexOrder,
-        VertexSelector,
+        Triangle, TriangleSprite, VertexOrder, VertexSelector
     },
 };
 
@@ -34,13 +32,16 @@ fn update_ui(
     mut contexts: EguiContexts,
     mut state: ResMut<State>,
     vertex_selector_query: Query<(Entity, &VertexSelector)>,
+    triangles_query: Query<&Triangle>,
+    triangle_sprites_query: Query<&TriangleSprite>,
 ) {
     egui::Window::new("Opções")
         .fixed_size([150.0, 200.0])
         .show(contexts.ctx_mut(), |ui| {
             match state.function {
                 Function::None => {
-                    ui.label("O que você deseja fazer?");
+                    ui.label("Selecione uma das opções abaixo.");
+                    ui.separator();
                     ui.horizontal( |ui| {
                         if ui.add(egui::Button::new("Adicionar")).clicked() {
                             state.new_triangle.clear();
@@ -52,11 +53,14 @@ fn update_ui(
                     });
                 }
                 Function::Create => {
-                    ui.label("Clique para adicionar pontos.");
+                    ui.label("Clique com o botão esquerdo do mouse para adicionar pontos.");
+                    ui.separator();
+                    ui.label("Use o seletor de cor abaixo para escolher a cor dos vértices.");
                     ui.horizontal( |ui| {
                         ui.label("Cor:");
                         ui.color_edit_button_rgb(&mut state.color_picker);
                     });
+                    ui.separator();
                     if ui.add(egui::Button::new("Voltar")).clicked() {
                         for (entity, _) in vertex_selector_query.iter() {
                             commands.entity(entity).despawn();
@@ -67,23 +71,47 @@ fn update_ui(
                 },
                 Function::Select => {
                     ui.label("Selecione um triângulo.");
+                    ui.separator();
                     if ui.add(egui::Button::new("Voltar")).clicked() {
                         state.function = Function::None;
                     }
                 }
                 Function::Modify(entity) => {
-                    ui.label(format!("Você está editando o triângulo {:?}", entity));
-                    ui.label("Clique com o botão direito para atribuir a cor.");
-                    ui.horizontal( |ui| {
-                        ui.label("Cor:");
-                        ui.color_edit_button_rgb(&mut state.color_picker);
-                    });
+                    if let Ok(triangle) = triangles_query.get(entity) {
+                        ui.label(format!("Você está editando {}º triângulo.", triangle.index));
+                        ui.separator();
+                        ui.label("Para mover um vértice, clique com o botão esquerdo do mouse sobre um seletor para selecioná-lo. Depois, clique na nova posição.");
+                        ui.separator();
+                        ui.label("Para atribuir a cor abaixo, clique com o botão direito do mouse sobre um seletor.");
+                        ui.horizontal( |ui| {
+                            ui.label("Cor:");
+                            ui.color_edit_button_rgb(&mut state.color_picker);
+                        });
+                        ui.separator();
 
-                    if ui.add(egui::Button::new("Voltar")).clicked() {
-                        for (entity, _) in vertex_selector_query.iter() {
-                            commands.entity(entity).despawn();
-                        }
-                        state.function = Function::None;
+                        ui.horizontal( |ui| {
+                            if ui.add(egui::Button::new("Voltar")).clicked() {
+                                for (entity, _) in vertex_selector_query.iter() {
+                                    commands.entity(entity).despawn();
+                                }
+                                state.function = Function::None;
+                            }
+                            if ui.add(egui::Button::new("Deletar")).clicked() {
+                                // despawna seletores
+                                for (entity, _) in vertex_selector_query.iter() {
+                                    commands.entity(entity).despawn();
+                                }
+                                // despawna sprite do triângulo
+                                if let Ok(triangle_sprite) = triangle_sprites_query.get(entity) {
+                                    if let Some(entity) = triangle_sprite.0 {
+                                        commands.entity(entity).despawn();
+                                    }
+                                }
+                                // despawna sprite do triângulo
+                                commands.entity(entity).despawn();
+                                state.function = Function::None;
+                            }
+                        });
                     }
                 },
             }
@@ -105,15 +133,37 @@ fn spawn_vertex_selectors(
         }
 
         match state.function {
-            
-            // Spawna seletores de vértice para o triângulo em criação
-
             Function::Create => {
+                let mut order: VertexOrder = VertexOrder::First;
+                let mut count: u8 = 0;
                 let mut z: f32 = 100.0;
 
                 for vertex in state.new_triangle.clone() {
+                    if count == 1 {
+                        order = VertexOrder::Middle;
+                    } else if count == 1 {
+                        order = VertexOrder::Last;
+                    }
+                    count += 1;
+
                     commands.spawn((
-                        VertexSelector(VertexOrder::Indifferent),
+                        VertexSelector(order.clone()),
+                        MaterialMesh2dBundle {
+                            mesh: meshes.add(shape::Circle::new(9.0).into()).into(),
+                            material: materials.add(ColorMaterial::from(Color::BLACK)),
+                            transform: Transform::from_translation(Vec3::new(
+                                vertex.position[0],
+                                vertex.position[1], 
+                                z,
+                            )),
+                            ..default()
+                        },
+                    ));
+    
+                    z += 1.0;
+
+                    commands.spawn((
+                        VertexSelector(order.clone()),
                         MaterialMesh2dBundle {
                             mesh: meshes.add(shape::Circle::new(8.0).into()).into(),
                             material: materials.add(ColorMaterial::from(Color::WHITE)),
@@ -129,7 +179,7 @@ fn spawn_vertex_selectors(
                     z += 1.0;
 
                     commands.spawn((
-                        VertexSelector(VertexOrder::Indifferent),
+                        VertexSelector(order.clone()),
                         MaterialMesh2dBundle {
                             mesh: meshes.add(shape::Circle::new(7.0).into()).into(),
                             material: materials.add(ColorMaterial::from(Color::Rgba { 
@@ -151,13 +201,30 @@ fn spawn_vertex_selectors(
                 }
             }
 
-            // Spawna seletores de vértice para o triângulo selecionado
 
             Function::Modify(entity) => {
                 let triangle = triangles_query.get(entity).unwrap();
                 let mut z: f32 = 100.0;
 
-                // Seletor do primeiro vértice
+                // --------------------
+                // seletor do primeiro vértice
+                // --------------------
+
+                commands.spawn((
+                    VertexSelector(VertexOrder::First),
+                    MaterialMesh2dBundle {
+                        mesh: meshes.add(shape::Circle::new(9.0).into()).into(),
+                        material: materials.add(ColorMaterial::from(Color::BLACK)),
+                        transform: Transform::from_translation(Vec3::new(
+                            triangle.first.position[0],
+                            triangle.first.position[1], 
+                            z,
+                        )),
+                        ..default()
+                    },
+                ));
+
+                z += 1.0;
 
                 commands.spawn((
                     VertexSelector(VertexOrder::First),
@@ -200,7 +267,25 @@ fn spawn_vertex_selectors(
                     },
                 ));
 
-                // Seletor do vértice do meio
+                z += 1.0;
+
+                // --------------------
+                // seletor do vértice do meio
+                // --------------------
+
+                commands.spawn((
+                    VertexSelector(VertexOrder::Middle),
+                    MaterialMesh2dBundle {
+                        mesh: meshes.add(shape::Circle::new(9.0).into()).into(),
+                        material: materials.add(ColorMaterial::from(Color::BLACK)),
+                        transform: Transform::from_translation(Vec3::new(
+                            triangle.middle.position[0],
+                            triangle.middle.position[1], 
+                            z,
+                        )),
+                        ..default()
+                    },
+                ));
 
                 z += 1.0;
 
@@ -245,7 +330,25 @@ fn spawn_vertex_selectors(
                     },
                 ));
 
-                // Seletor do último vértice
+                z += 1.0;
+
+                // --------------------
+                // seletor do último vértice
+                // --------------------
+
+                commands.spawn((
+                    VertexSelector(VertexOrder::Last),
+                    MaterialMesh2dBundle {
+                        mesh: meshes.add(shape::Circle::new(9.0).into()).into(),
+                        material: materials.add(ColorMaterial::from(Color::BLACK)),
+                        transform: Transform::from_translation(Vec3::new(
+                            triangle.last.position[0],
+                            triangle.last.position[1], 
+                            z,
+                        )),
+                        ..default()
+                    },
+                ));
 
                 z += 1.0;
 

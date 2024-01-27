@@ -28,6 +28,7 @@ pub struct State {
     pub color_picker: [f32; 3],
     pub new_triangle: Vec<Vertex>,
     pub spawn_vertex_selectors: bool,
+    pub triangles_count: usize,
 }
 
 fn setup_state(
@@ -39,5 +40,6 @@ fn setup_state(
         new_triangle: Vec::new(),
         spawn_vertex_selectors: false,
         selected_vertex: None,
+        triangles_count: 1,
     });
 }
