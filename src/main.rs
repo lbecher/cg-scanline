@@ -1,5 +1,6 @@
 mod state;
 mod camera;
+mod constants;
 mod triangles;
 mod ui;
 
@@ -8,6 +9,7 @@ use bevy::{
     window::WindowTheme,
 };
 use bevy_egui::EguiPlugin;
+use constants::{HEIGHT, WIDTH};
 
 use crate::{
     camera::CameraPlugin,
@@ -24,7 +26,7 @@ fn main() {
                 primary_window: Some(Window {
                     title: "Primeiro Trabalho de CG - Luiz Fernando".into(),
                     window_theme: Some(WindowTheme::Dark),
-                    resolution: (800.0, 600.0).into(),
+                    resolution: (WIDTH, HEIGHT).into(),
                     resizable: false,
                     ..default()
                 }),

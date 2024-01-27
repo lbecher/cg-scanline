@@ -5,10 +5,10 @@ use bevy::{
 };
 use bevy_egui::EguiContexts;
 
-use crate::state::{
+use crate::{constants::{HEIGHT, WIDTH}, state::{
     Function,
     State,
-};
+}};
 
 pub struct TrianglesPlugin;
 
@@ -93,14 +93,43 @@ fn creating(
         // --------------------
         
         else {
+            let triangle = Triangle {
+                first: state.new_triangle.remove(0),
+                middle: state.new_triangle.remove(0),
+                last: state.new_triangle.remove(0),
+                redraw: true,
+                index: state.triangles_count,
+            };
+
+            state.first_position_x_string = format!(
+                "{}",
+                triangle.first.position[0],
+            );
+            state.first_position_y_string = format!(
+                "{}",
+                triangle.first.position[1],
+            );
+
+            state.middle_position_x_string = format!(
+                "{}",
+                triangle.middle.position[0],
+            );
+            state.middle_position_y_string = format!(
+                "{}",
+                triangle.middle.position[1],
+            );
+
+            state.last_position_x_string = format!(
+                "{}",
+                triangle.last.position[0],
+            );
+            state.last_position_y_string = format!(
+                "{}",
+                triangle.last.position[1],
+            );
+
             let entity = commands.spawn((
-                Triangle {
-                    first: state.new_triangle.remove(0),
-                    middle: state.new_triangle.remove(0),
-                    last: state.new_triangle.remove(0),
-                    redraw: true,
-                    index: state.triangles_count,
-                },
+                triangle,
                 TriangleSprite(None),
             )).id();
 
@@ -178,14 +207,41 @@ fn modifying(
                         VertexOrder::First => {
                             triangle.first.position[0] = cursor_position.x;
                             triangle.first.position[1] = window.height() - cursor_position.y;
+
+                            state.first_position_x_string = format!(
+                                "{}",
+                                triangle.first.position[0],
+                            );
+                            state.first_position_y_string = format!(
+                                "{}",
+                                triangle.first.position[1],
+                            );
                         }
                         VertexOrder::Middle => {
                             triangle.middle.position[0] = cursor_position.x;
                             triangle.middle.position[1] = window.height() - cursor_position.y;
+
+                            state.middle_position_x_string = format!(
+                                "{}",
+                                triangle.middle.position[0],
+                            );
+                            state.middle_position_y_string = format!(
+                                "{}",
+                                triangle.middle.position[1],
+                            );
                         }
                         VertexOrder::Last => {
                             triangle.last.position[0] = cursor_position.x;
                             triangle.last.position[1] = window.height() - cursor_position.y;
+
+                            state.last_position_x_string = format!(
+                                "{}",
+                                triangle.last.position[0],
+                            );
+                            state.last_position_y_string = format!(
+                                "{}",
+                                triangle.last.position[1],
+                            );
                         }
                     };
 
@@ -227,7 +283,6 @@ fn modifying(
 }
 
 
-
 fn redrawing(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
@@ -244,8 +299,8 @@ fn redrawing(
 
             let mut image = Image::new_fill(
                 Extent3d {
-                    width: window.width() as u32,
-                    height: window.height() as u32,
+                    width: WIDTH as u32,
+                    height: HEIGHT as u32,
                     depth_or_array_layers: 1,
                 },
                 TextureDimension::D2,
@@ -300,6 +355,33 @@ fn selecting(
                     if is_inside(click, triangle) {
                         state.function = Function::Modify(entity);
                         state.spawn_vertex_selectors = true;
+
+                        state.first_position_x_string = format!(
+                            "{}",
+                            triangle.first.position[0],
+                        );
+                        state.first_position_y_string = format!(
+                            "{}",
+                            triangle.first.position[1],
+                        );
+
+                        state.middle_position_x_string = format!(
+                            "{}",
+                            triangle.middle.position[0],
+                        );
+                        state.middle_position_y_string = format!(
+                            "{}",
+                            triangle.middle.position[1],
+                        );
+
+                        state.last_position_x_string = format!(
+                            "{}",
+                            triangle.last.position[0],
+                        );
+                        state.last_position_y_string = format!(
+                            "{}",
+                            triangle.last.position[1],
+                        );
                     }
                 }
             }
@@ -354,7 +436,7 @@ fn render(
             let g = v0.color[1] + blend_factor * (v1.color[1] - v0.color[1]);
             let b = v0.color[2] + blend_factor * (v1.color[2] - v0.color[2]);
     
-            let i = height - (y.round() as usize);
+            let i = height - (y.round() as usize) - 1;
             let j = x.round() as usize;
             let index = (i * width + j) * 4;
 
@@ -372,7 +454,7 @@ fn render(
     let y_max = triangle.last.position[1].max(triangle.middle.position[1].max(triangle.first.position[1])).round() as usize;
 
     for i in y_min..=y_max {
-        let i = height - i;
+        let i = height - i - 1;
 
         let mut first_color: Option<[f32; 3]> = None;
         let mut first_color_j: usize = 0;

@@ -8,13 +8,12 @@ use bevy_egui::{
 };
 
 use crate::{
-    state::{
+    constants::{HEIGHT, WIDTH}, state::{
         Function,
         State,
-    },
-    triangles::{
+    }, triangles::{
         Triangle, TriangleSprite, VertexOrder, VertexSelector
-    },
+    }
 };
 
 pub struct UIPlugin;
@@ -32,7 +31,7 @@ fn update_ui(
     mut contexts: EguiContexts,
     mut state: ResMut<State>,
     vertex_selector_query: Query<(Entity, &VertexSelector)>,
-    triangles_query: Query<&Triangle>,
+    mut triangles_query: Query<&mut Triangle>,
     triangle_sprites_query: Query<&TriangleSprite>,
 ) {
     egui::Window::new("Opções")
@@ -79,14 +78,23 @@ fn update_ui(
                 Function::Modify(entity) => {
                     if let Ok(triangle) = triangles_query.get(entity) {
                         ui.label(format!("Você está editando {}º triângulo.", triangle.index));
+
                         ui.separator();
+
                         ui.label("Para mover um vértice, clique com o botão esquerdo do mouse sobre um seletor para selecioná-lo. Depois, clique na nova posição.");
+
                         ui.separator();
+
                         ui.label("Para atribuir a cor abaixo, clique com o botão direito do mouse sobre um seletor.");
                         ui.horizontal( |ui| {
                             ui.label("Cor:");
                             ui.color_edit_button_rgb(&mut state.color_picker);
                         });
+
+                        ui.separator();
+
+                        ui.checkbox(&mut state.show_properties_window, "Exibir janela de propriedades");
+
                         ui.separator();
 
                         ui.horizontal( |ui| {
@@ -116,6 +124,190 @@ fn update_ui(
                 },
             }
         });
+    
+    if state.show_properties_window {
+        if let Function::Modify(entity) = state.function {
+            if let Ok(mut triangle) = triangles_query.get_mut(entity) {
+                egui::Window::new("Propriedades")
+                    .fixed_size([150.0, 200.0])
+                    .show(contexts.ctx_mut(), |ui| {
+                        ui.vertical(|ui| {
+                            ui.label("Primeiro vértice:");
+                            ui.horizontal(|ui| {
+                                ui.label("X:");
+                                ui.add(egui::TextEdit::singleline(&mut state.first_position_x_string));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("Y:");
+                                ui.add(egui::TextEdit::singleline(&mut state.first_position_y_string));
+                            });
+                            if state.first_position_string_parsing_error {
+                                ui.label("Algo aqui não é ponto flutuante!");
+                            }
+                            ui.horizontal(|ui| {
+                                if ui.button("Aplicar").clicked() {
+                                    if let (
+                                        Ok(mut xp),
+                                        Ok(mut yp),
+                                    ) = (
+                                        state.first_position_x_string.parse::<f32>(),
+                                        state.first_position_y_string.parse::<f32>(),
+                                    ) {
+                                        if xp >= WIDTH {
+                                            xp = WIDTH - 1.0;
+                                            state.first_position_x_string = format!("{}", xp);
+                                        } else if xp < 0.0 {
+                                            xp = 0.0;
+                                            state.first_position_x_string = format!("{}", xp);
+                                        }
+                                        if yp >= HEIGHT {
+                                            yp = HEIGHT - 1.0;
+                                            state.first_position_y_string = format!("{}", yp);
+                                        } else if yp < 0.0 {
+                                            yp = 0.0;
+                                            state.first_position_y_string = format!("{}", yp);
+                                        }
+                                        triangle.first.position[0] = xp;
+                                        triangle.first.position[1] = yp;
+                                        triangle.redraw = true;
+                                        state.spawn_vertex_selectors = true;
+                                        state.first_position_string_parsing_error = false;
+                                    } else {
+                                        state.first_position_string_parsing_error = true;
+                                    }
+                                }
+                                if ui.button("Restaurar").clicked() {
+                                    state.first_position_x_string = format!(
+                                        "{}",
+                                        triangle.first.position[0],
+                                    );
+                                    state.first_position_y_string = format!(
+                                        "{}",
+                                        triangle.first.position[1],
+                                    );
+                                }
+                            });
+
+                            ui.separator();
+
+                            ui.label("Segundo vértice:");
+                            ui.horizontal(|ui| {
+                                ui.label("X:");
+                                ui.add(egui::TextEdit::singleline(&mut state.middle_position_x_string));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("Y:");
+                                ui.add(egui::TextEdit::singleline(&mut state.middle_position_y_string));
+                            });
+                            if state.middle_position_string_parsing_error {
+                                ui.label("Algo aqui não é ponto flutuante!");
+                            }
+                            ui.horizontal(|ui| {
+                                if ui.button("Aplicar").clicked() {
+                                    if let (
+                                        Ok(mut xp),
+                                        Ok(mut yp),
+                                    ) = (
+                                        state.middle_position_x_string.parse::<f32>(),
+                                        state.middle_position_y_string.parse::<f32>(),
+                                    ) {
+                                        if xp >= WIDTH {
+                                            xp = WIDTH - 1.0;
+                                            state.middle_position_x_string = format!("{}", xp);
+                                        } else if xp < 0.0 {
+                                            xp = 0.0;
+                                            state.middle_position_x_string = format!("{}", xp);
+                                        }
+                                        if yp >= HEIGHT {
+                                            yp = HEIGHT - 1.0;
+                                            state.middle_position_y_string = format!("{}", yp);
+                                        } else if yp < 0.0 {
+                                            yp = 0.0;
+                                            state.middle_position_y_string = format!("{}", yp);
+                                        }
+                                        triangle.middle.position[0] = xp;
+                                        triangle.middle.position[1] = yp;
+                                        triangle.redraw = true;
+                                        state.spawn_vertex_selectors = true;
+                                        state.middle_position_string_parsing_error = false;
+                                    } else {
+                                        state.middle_position_string_parsing_error = true;
+                                    }
+                                }
+                                if ui.button("Restaurar").clicked() {
+                                    state.middle_position_x_string = format!(
+                                        "{}",
+                                        triangle.middle.position[0],
+                                    );
+                                    state.middle_position_y_string = format!(
+                                        "{}",
+                                        triangle.middle.position[1],
+                                    );
+                                }
+                            });
+
+                            ui.separator();
+
+                            ui.label("Terceiro vértice:");
+                            ui.horizontal(|ui| {
+                                ui.label("X:");
+                                ui.add(egui::TextEdit::singleline(&mut state.last_position_x_string));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("Y:");
+                                ui.add(egui::TextEdit::singleline(&mut state.last_position_y_string));
+                            });
+                            if state.last_position_string_parsing_error {
+                                ui.label("Algo aqui não é ponto flutuante!");
+                            }
+                            ui.horizontal(|ui| {
+                                if ui.button("Aplicar").clicked() {
+                                    if let (
+                                        Ok(mut xp),
+                                        Ok(mut yp),
+                                    ) = (
+                                        state.last_position_x_string.parse::<f32>(),
+                                        state.last_position_y_string.parse::<f32>(),
+                                    ) {
+                                        if xp >= WIDTH {
+                                            xp = WIDTH - 1.0;
+                                            state.last_position_x_string = format!("{}", xp);
+                                        } else if xp < 0.0 {
+                                            xp = 0.0;
+                                            state.last_position_x_string = format!("{}", xp);
+                                        }
+                                        if yp >= HEIGHT {
+                                            yp = HEIGHT - 1.0;
+                                            state.last_position_y_string = format!("{}", yp);
+                                        } else if yp < 0.0 {
+                                            yp = 0.0;
+                                            state.last_position_y_string = format!("{}", yp);
+                                        }
+                                        triangle.last.position[0] = xp;
+                                        triangle.last.position[1] = yp;
+                                        triangle.redraw = true;
+                                        state.spawn_vertex_selectors = true;
+                                        state.last_position_string_parsing_error = false;
+                                    } else {
+                                        state.last_position_string_parsing_error = true;
+                                    }
+                                }
+                                if ui.button("Restaurar").clicked() {
+                                    state.last_position_x_string = format!(
+                                        "{}",
+                                        triangle.last.position[0],
+                                    );
+                                    state.last_position_y_string = format!(
+                                        "{}",
+                                        triangle.last.position[1],
+                                    );
+                                }
+                            });
+                        });
+                    });
+            }
+        }
+    }
 }
 
 
