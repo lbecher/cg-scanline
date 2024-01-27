@@ -73,7 +73,7 @@ fn creating(
                     let position: [f32; 3] = [
                         cursor_position.x,
                         window.height() - cursor_position.y,
-                        10.0,
+                        (state.triangles_count - 1) as f32,
                     ];
                     let color: [f32; 3] = state.color_picker.clone();
 
