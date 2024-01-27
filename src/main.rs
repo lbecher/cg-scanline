@@ -22,7 +22,7 @@ fn main() {
             .set(ImagePlugin::default_nearest())
             .set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: "Primeiro Trabalho de CG".into(),
+                    title: "Primeiro Trabalho de CG - Luiz Fernando".into(),
                     window_theme: Some(WindowTheme::Dark),
                     resolution: (800.0, 600.0).into(),
                     resizable: false,

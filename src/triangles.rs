@@ -408,16 +408,21 @@ fn render(
         }
 
         if let (Some(first_color), Some(last_color)) = (first_color, last_color) {
-            let points_len = (last_color_j - first_color_j) as f32;    
-            let mut count: f32 = 0.0;
+            let points_len = (last_color_j - first_color_j) as f32;
             let mut j = first_color_j + 1;
+
+            let tr = (last_color[0] - first_color[0]) / points_len;
+            let tg = (last_color[1] - first_color[1]) / points_len;
+            let tb = (last_color[2] - first_color[2]) / points_len;
+
+            let mut r = first_color[0];
+            let mut g = first_color[1];
+            let mut b = first_color[2];
+
             while j < last_color_j {
-                let blend_factor = count / points_len;
-                count += 1.0;
-        
-                let r = first_color[0] + blend_factor * (last_color[0] - first_color[0]);
-                let g = first_color[1] + blend_factor * (last_color[1] - first_color[1]);
-                let b = first_color[2] + blend_factor * (last_color[2] - first_color[2]);
+                r += tr;
+                g += tg;
+                b += tb;
 
                 let index = (i * width + j) * 4;
                 image[index] = (r * 255.0) as u8;
@@ -429,148 +434,6 @@ fn render(
             }
         }
     }
-
-        /*
-
-          // x, y, r, g, b
-    let mut edges: Vec<Vec<(f32, f32, f32, f32, f32)>> = Vec::new();
-        
-        let mut edge: Vec<(f32, f32, f32, f32, f32)> = Vec::new();
-
-        let mut count: f32 = 0.0;
-        for (x, y) in points {
-            let blend_factor = count / points_len;
-            count += 1.0;
-    
-            let r = v0.color[0] + blend_factor * (v1.color[0] - v0.color[0]);
-            let g = v0.color[1] + blend_factor * (v1.color[1] - v0.color[1]);
-            let b = v0.color[2] + blend_factor * (v1.color[2] - v0.color[2]);
-
-            edge.push((x, y, r, g, b));
-        }
-
-        // para deixar y decrescente
-        if edge[0].1 < edge[edge.len() - 1].1 {
-            edge.reverse();
-        }
-
-        // garante que os maiores y estejam no começo
-        if edges.len() > 0 && edge[0].1 >= edges[0][0].1 {
-            // garante que a aresta mais alta seja a primeira
-            let edge_dy = edge[edge.len() - 1].1 - edge[0].1;
-            let edges0_dy = edges[0][edges[0].len() - 1].1 - edges[0][0].1;
-            if edge_dy.abs() > edges0_dy.abs() {
-                edges.insert(0, edge);
-            } else {
-                edges.insert(1, edge);
-            }
-        } else {
-            edges.push(edge);
-        }
-    }
-
-    println!("{:?} {:?}", edges[0][0],  edges[0][edges[0].len() - 1]);
-    println!("{:?} {:?}", edges[1][0],  edges[1][edges[1].len() - 1]);
-    println!("{:?} {:?}", edges[2][0],  edges[2][edges[2].len() - 1]);
-
-    for mut e0 in edges.remove(0) {
-        let mut e1 = if edges[0].len() > 0 {
-            edges[0].remove(0)
-        } else {
-            edges[1].remove(0)
-        };
-
-        if e0.0 > e1.0 {
-            std::mem::swap(&mut e0, &mut e1);
-        }
-
-        let y = e0.1.round() as usize;
-        let points_len = e1.0.round() - e0.0.round();
-
-        let mut count: f32 = 0.0;
-        for x in e0.0.round() as usize..e1.0.round() as usize {
-            let blend_factor = count / points_len;
-            count += 1.0;
-    
-            let r = e0.2 + blend_factor * (e1.2 - e0.2);
-            let g = e0.3 + blend_factor * (e1.3 - e0.3);
-            let b = e0.4 + blend_factor * (e1.4 - e0.4);
-
-            let i = height - y;
-            let j = x;
-            let index = (i * width + j) * 4;
-
-            image[index] = (r * 255.0) as u8;
-            image[index + 1] = (g * 255.0) as u8;
-            image[index + 2] = (b * 255.0) as u8;
-            image[index + 3] = 255;
-        }
-    }*/
-
-
-    /*
-    let x_min = triangle.first.position[0].round() as usize;
-    let x_max = triangle.last.position[0].round() as usize;
-
-    let y_min = triangle.last.position[1].min(triangle.middle.position[1].min(triangle.first.position[1])).round() as usize;
-    let y_max = triangle.last.position[1].max(triangle.middle.position[1].max(triangle.first.position[1])).round() as usize;
-
-    for i in y_min..=y_max {
-        let i = height - i;
-
-        let mut first_color: Option<[f32; 3]> = None;
-        let mut first_color_j: usize = 0;
-        let mut last_color: Option<[f32; 3]> = None;
-        let mut last_color_j: usize = 0;
-
-        for j in x_min..=x_max {
-            let index = (i * width + j) * 4;
-            if image[index + 3] > 0 {
-                if first_color.is_none() {
-                    first_color = Some(
-                        [
-                            image[index] as f32 / 255.0,
-                            image[index + 1] as f32 / 255.0,
-                            image[index + 2] as f32 / 255.0,
-                        ]
-                    );
-                    first_color_j = j;
-                } else {
-                    last_color = Some(
-                        [
-                            image[index] as f32 / 255.0,
-                            image[index + 1] as f32 / 255.0,
-                            image[index + 2] as f32 / 255.0,
-                        ]
-                    );
-                    last_color_j = j;
-                    break;
-                }
-            }
-        }
-
-        if let (Some(first_color), Some(last_color)) = (first_color, last_color) {
-            let points_len = (last_color_j - first_color_j) as f32;    
-            let mut count: f32 = 0.0;
-            let mut j = first_color_j + 1;
-            while j < last_color_j {
-                let blend_factor = count / points_len;
-                count += 1.0;
-        
-                let r = first_color[0] + blend_factor * (last_color[0] - first_color[0]);
-                let g = first_color[1] + blend_factor * (last_color[1] - first_color[1]);
-                let b = first_color[2] + blend_factor * (last_color[2] - first_color[2]);
-
-                let index = (i * width + j) * 4;
-                image[index] = (r * 255.0) as u8;
-                image[index + 1] = (g * 255.0) as u8;
-                image[index + 2] = (b * 255.0) as u8;
-                image[index + 3] = 255;
-
-                j += 1;
-            }
-        }
-    }*/
 }
 
 
