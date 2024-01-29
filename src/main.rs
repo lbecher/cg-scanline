@@ -27,10 +27,14 @@ fn main() {
             .set(ImagePlugin::default_nearest())
             .set(WindowPlugin {
                 primary_window: Some(Window {
+                    enabled_buttons: bevy::window::EnabledButtons {
+                        maximize: false,
+                        ..Default::default()
+                    },
                     title: "Primeiro Trabalho de CG - Luiz Fernando".into(),
-                    window_theme: Some(WindowTheme::Dark),
                     resolution: (WIDTH, HEIGHT).into(),
                     resizable: false,
+                    window_theme: Some(WindowTheme::Dark),
                     ..default()
                 }),
                 ..default()
