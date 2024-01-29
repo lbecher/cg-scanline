@@ -34,8 +34,8 @@ pub struct VertexSelector(pub VertexOrder);
 
 #[derive(Debug, Clone)]
 pub struct Vertex {
-    pub color: [f32; 3],
-    pub position: [f32; 3],
+    pub color: [u8; 3],
+    pub position: [f32; 2],
 }
 
 #[derive(Debug, Component)]
@@ -45,7 +45,7 @@ pub struct Triangle {
     pub last: Vertex,
     pub redraw: bool,
     pub index: usize,
-    pub edges_color: Option<[f32; 3]>,
+    pub edges_color: Option<[u8; 3]>,
 }
 
 #[derive(Component)]
@@ -71,12 +71,11 @@ fn creating(
         if state.new_triangle.len() < 3 {
             if input.just_pressed(MouseButton::Left) && !(ctx.is_using_pointer() || ctx.is_pointer_over_area()) {
                 if let Some(cursor_position) = window.cursor_position() {
-                    let position: [f32; 3] = [
+                    let position: [f32; 2] = [
                         cursor_position.x,
                         window.height() - cursor_position.y,
-                        (state.triangles_count - 1) as f32,
                     ];
-                    let color: [f32; 3] = state.vertex_color_picker.clone();
+                    let color: [u8; 3] = state.vertex_color_picker.clone();
 
                     state.new_triangle.push(Vertex {
                         position,
@@ -115,6 +114,24 @@ fn creating(
 
             state.last_position_x_string = triangle.last.position[0].to_string();
             state.last_position_y_string = triangle.last.position[1].to_string();
+
+            state.first_color_r_string = triangle.first.color[0].to_string();
+            state.first_color_g_string = triangle.first.color[1].to_string();
+            state.first_color_b_string = triangle.first.color[2].to_string();
+
+            state.middle_color_r_string = triangle.middle.color[0].to_string();
+            state.middle_color_g_string = triangle.middle.color[1].to_string();
+            state.middle_color_b_string = triangle.middle.color[2].to_string();
+
+            state.last_color_r_string = triangle.last.color[0].to_string();
+            state.last_color_g_string = triangle.last.color[1].to_string();
+            state.last_color_b_string = triangle.last.color[2].to_string();
+
+            if let Some(edges_color) = triangle.edges_color {
+                state.edges_color_r_string = edges_color[0].to_string();
+                state.edges_color_g_string = edges_color[1].to_string();
+                state.edges_color_b_string = edges_color[2].to_string();     
+            }
 
             let entity = commands.spawn((
                 triangle,
@@ -159,14 +176,29 @@ fn modifying(
                         match vertex_selector.0 {
                             VertexOrder::First => {
                                 triangle.first.color = state.vertex_color_picker;
+
+                                state.first_color_r_string = triangle.first.color[0].to_string();
+                                state.first_color_g_string = triangle.first.color[1].to_string();
+                                state.first_color_b_string = triangle.first.color[2].to_string();
+
                                 triangle.redraw = true;
                             }
                             VertexOrder::Middle => {
                                 triangle.middle.color = state.vertex_color_picker;
+
+                                state.middle_color_r_string = triangle.middle.color[0].to_string();
+                                state.middle_color_g_string = triangle.middle.color[1].to_string();
+                                state.middle_color_b_string = triangle.middle.color[2].to_string();
+
                                 triangle.redraw = true;
                             }
                             VertexOrder::Last => {
                                 triangle.last.color = state.vertex_color_picker;
+
+                                state.last_color_r_string = triangle.last.color[0].to_string();
+                                state.last_color_g_string = triangle.last.color[1].to_string();
+                                state.last_color_b_string = triangle.last.color[2].to_string();
+
                                 triangle.redraw = true;
                             }
                         }
@@ -295,7 +327,7 @@ fn redrawing(
                 transform: Transform::from_translation(Vec3::new(
                     window.width() / 2.0,
                     window.height() / 2.0,
-                    triangle.first.position[2],
+                    triangle.index as f32,
                 )),
                 ..default()
             }).id();
@@ -325,7 +357,7 @@ fn selecting(
                     if is_inside(click, triangle) {
                         state.function = Function::Modify(entity);
                         state.spawn_vertex_selectors = true;
-
+                        
                         state.first_position_x_string = triangle.first.position[0].to_string();
                         state.first_position_y_string = triangle.first.position[1].to_string();
 
@@ -334,6 +366,24 @@ fn selecting(
 
                         state.last_position_x_string = triangle.last.position[0].to_string();
                         state.last_position_y_string = triangle.last.position[1].to_string();
+
+                        state.first_color_r_string = triangle.first.color[0].to_string();
+                        state.first_color_g_string = triangle.first.color[1].to_string();
+                        state.first_color_b_string = triangle.first.color[2].to_string();
+
+                        state.middle_color_r_string = triangle.middle.color[0].to_string();
+                        state.middle_color_g_string = triangle.middle.color[1].to_string();
+                        state.middle_color_b_string = triangle.middle.color[2].to_string();
+
+                        state.last_color_r_string = triangle.last.color[0].to_string();
+                        state.last_color_g_string = triangle.last.color[1].to_string();
+                        state.last_color_b_string = triangle.last.color[2].to_string();
+
+                        if let Some(edges_color) = triangle.edges_color {
+                            state.edges_color_r_string = edges_color[0].to_string();
+                            state.edges_color_g_string = edges_color[1].to_string();
+                            state.edges_color_b_string = edges_color[2].to_string();     
+                        }
                     }
                 }
             }
@@ -377,20 +427,29 @@ fn render(
 
         let x0 = v0.position[0];
         let y0 = v0.position[1];
+
         let x1 = v1.position[0];
         let y1 = v1.position[1];
+
+        let r0 = v0.color[0] as f32 / 255.0;
+        let g0 = v0.color[1] as f32 / 255.0;
+        let b0 = v0.color[2] as f32 / 255.0;
+
+        let r1 = v1.color[0] as f32 / 255.0;
+        let g1 = v1.color[1] as f32 / 255.0;
+        let b1 = v1.color[2] as f32 / 255.0;
 
         let points = bresenham(x0, y0, x1, y1);
         edges.push(points.clone());
         let points_len = points.len() as f32;
 
-        let tr = (v1.color[0] - v0.color[0]) / points_len;
-        let tg = (v1.color[1] - v0.color[1]) / points_len;
-        let tb = (v1.color[2] - v0.color[2]) / points_len;
+        let tr = (r1 - r0) / points_len;
+        let tg = (g1 - g0) / points_len;
+        let tb = (b1 - b0) / points_len;
 
-        let mut r = v0.color[0];
-        let mut g = v0.color[1];
-        let mut b = v0.color[2];
+        let mut r = r0;
+        let mut g = g0;
+        let mut b = b0;
 
         for (x, y) in points {
             r += tr;
@@ -427,8 +486,10 @@ fn render(
 
         let mut first_color: Option<[f32; 3]> = None;
         let mut first_color_j: usize = 0;
+
         let mut last_color: Option<[f32; 3]> = None;
         let mut last_color_j: usize = 0;
+        
         let mut after_first_line = false;
 
         for j in x_min..=x_max {
@@ -505,9 +566,9 @@ fn render(
                 let j = x.round() as usize;
                 let index = (i * width + j) * 4;
     
-                image[index] = (r * 255.0) as u8;
-                image[index + 1] = (g * 255.0) as u8;
-                image[index + 2] = (b * 255.0) as u8;
+                image[index] = r;
+                image[index + 1] = g;
+                image[index + 2] = b;
                 image[index + 3] = 255;
             }
         }

@@ -1,2 +1,2 @@
-pub const WIDTH: f32 = 900.0;
-pub const HEIGHT: f32 = 600.0;
+pub const WIDTH: f32 = 1100.0;
+pub const HEIGHT: f32 = 680.0;

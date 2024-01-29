@@ -65,13 +65,13 @@ fn update_ui(
                     ui.label("Use o seletor de cor abaixo para escolher a cor dos vértices.");
                     ui.horizontal( |ui| {
                         ui.label("Cor:");
-                        ui.color_edit_button_rgb(&mut state.vertex_color_picker);
+                        ui.color_edit_button_srgb(&mut state.vertex_color_picker);
                     });
                     ui.separator();
                     ui.checkbox(&mut state.constant_edges, "Arestas com cor constante");
                     ui.horizontal( |ui| {
                         ui.label("Cor:");
-                        ui.color_edit_button_rgb(&mut state.edges_color_picker);
+                        ui.color_edit_button_srgb(&mut state.edges_color_picker);
                     });
                     ui.separator();
                     if ui.add(egui::Button::new("Voltar")).clicked() {
@@ -91,7 +91,7 @@ fn update_ui(
                 }
                 Function::Modify(entity) => {
                     if let Ok(mut triangle) = triangles_query.get_mut(entity) {
-                        ui.label(format!("Você está editando 0 triângulo {}.", triangle.index));
+                        ui.label(format!("Você está editando o triângulo {}.", triangle.index));
 
                         ui.separator();
 
@@ -102,7 +102,7 @@ fn update_ui(
                         ui.label("Para atribuir a cor abaixo, clique com o botão direito do mouse sobre um seletor.");
                         ui.horizontal( |ui| {
                             ui.label("Cor:");
-                            ui.color_edit_button_rgb(&mut state.vertex_color_picker);
+                            ui.color_edit_button_srgb(&mut state.vertex_color_picker);
                         });
 
                         ui.separator();
@@ -111,11 +111,15 @@ fn update_ui(
                         let constant_edges_changed = ui.checkbox(&mut state.constant_edges, "Arestas com cor constante").changed();
                         ui.horizontal( |ui| {
                             ui.label("Cor:");
-                            edges_color_changed = ui.color_edit_button_rgb(&mut state.edges_color_picker).changed();
+                            edges_color_changed = ui.color_edit_button_srgb(&mut state.edges_color_picker).changed();
                         });
                         if constant_edges_changed || edges_color_changed {
                             if state.constant_edges {
                                 triangle.edges_color = Some(state.edges_color_picker);
+                                state.edges_color_r_string = state.edges_color_picker[0].to_string();
+                                state.edges_color_g_string = state.edges_color_picker[1].to_string();
+                                state.edges_color_b_string = state.edges_color_picker[2].to_string();
+                                
                             } else {
                                 triangle.edges_color = None;
                             }
@@ -164,6 +168,53 @@ fn update_ui(
                     .fixed_size([150.0, 200.0])
                     .show(contexts.ctx_mut(), |ui| {
                         ui.vertical(|ui| {
+                            if let Some(edges_color) = triangle.edges_color {
+                                ui.label("Cor das arestas:");
+                                ui.horizontal(|ui| {
+                                    ui.label("R:");
+                                    ui.add(egui::TextEdit::singleline(&mut state.edges_color_r_string));
+                                });
+                                ui.horizontal(|ui| {
+                                    ui.label("G:");
+                                    ui.add(egui::TextEdit::singleline(&mut state.edges_color_g_string));
+                                });
+                                ui.horizontal(|ui| {
+                                    ui.label("B:");
+                                    ui.add(egui::TextEdit::singleline(&mut state.edges_color_b_string));
+                                });
+                                if state.edges_string_parsing_error {
+                                    ui.label("Algo aqui não está certo!");
+                                }
+                                ui.horizontal(|ui| {
+                                    if ui.button("Aplicar").clicked() {
+                                        if let (
+                                            Ok(rc),
+                                            Ok(gc),
+                                            Ok(bc),
+                                        ) = (
+                                            state.edges_color_r_string.parse::<u8>(),
+                                            state.edges_color_g_string.parse::<u8>(),
+                                            state.edges_color_b_string.parse::<u8>(),
+                                        ) {
+                                            state.edges_color_picker = [rc, gc, bc];
+                                            triangle.edges_color = Some([rc, gc, bc]);
+                                            triangle.redraw = true;
+                                            state.spawn_vertex_selectors = true;
+                                            state.edges_string_parsing_error = false;
+                                        } else {
+                                            state.edges_string_parsing_error = true;
+                                        }
+                                    }
+                                    if ui.button("Restaurar").clicked() {
+                                        state.edges_color_r_string = edges_color[0].to_string();
+                                        state.edges_color_g_string = edges_color[1].to_string();
+                                        state.edges_color_b_string = edges_color[2].to_string();
+                                    }
+                                });
+
+                                ui.separator();
+                            }
+
                             ui.label("Primeiro vértice:");
                             ui.horizontal(|ui| {
                                 ui.label("X:");
@@ -173,17 +224,35 @@ fn update_ui(
                                 ui.label("Y:");
                                 ui.add(egui::TextEdit::singleline(&mut state.first_position_y_string));
                             });
-                            if state.first_position_string_parsing_error {
-                                ui.label("Algo aqui não é ponto flutuante!");
+                            ui.horizontal(|ui| {
+                                ui.label("R:");
+                                ui.add(egui::TextEdit::singleline(&mut state.first_color_r_string));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("G:");
+                                ui.add(egui::TextEdit::singleline(&mut state.first_color_g_string));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("B:");
+                                ui.add(egui::TextEdit::singleline(&mut state.first_color_b_string));
+                            });
+                            if state.first_vertex_string_parsing_error {
+                                ui.label("Algo aqui não está certo!");
                             }
                             ui.horizontal(|ui| {
                                 if ui.button("Aplicar").clicked() {
                                     if let (
                                         Ok(mut xp),
                                         Ok(mut yp),
+                                        Ok(rc),
+                                        Ok(gc),
+                                        Ok(bc),
                                     ) = (
                                         state.first_position_x_string.parse::<f32>(),
                                         state.first_position_y_string.parse::<f32>(),
+                                        state.first_color_r_string.parse::<u8>(),
+                                        state.first_color_g_string.parse::<u8>(),
+                                        state.first_color_b_string.parse::<u8>(),
                                     ) {
                                         if xp >= WIDTH {
                                             xp = WIDTH - 1.0;
@@ -201,16 +270,22 @@ fn update_ui(
                                         }
                                         triangle.first.position[0] = xp;
                                         triangle.first.position[1] = yp;
+                                        triangle.first.color[0] = rc;
+                                        triangle.first.color[1] = gc;
+                                        triangle.first.color[2] = bc;
                                         triangle.redraw = true;
                                         state.spawn_vertex_selectors = true;
-                                        state.first_position_string_parsing_error = false;
+                                        state.first_vertex_string_parsing_error = false;
                                     } else {
-                                        state.first_position_string_parsing_error = true;
+                                        state.first_vertex_string_parsing_error = true;
                                     }
                                 }
                                 if ui.button("Restaurar").clicked() {
                                     state.first_position_x_string = triangle.first.position[0].to_string();
                                     state.first_position_y_string = triangle.first.position[1].to_string();
+                                    state.first_color_r_string = triangle.first.color[0].to_string();
+                                    state.first_color_g_string = triangle.first.color[1].to_string();
+                                    state.first_color_b_string = triangle.first.color[2].to_string();
                                 }
                             });
 
@@ -225,17 +300,35 @@ fn update_ui(
                                 ui.label("Y:");
                                 ui.add(egui::TextEdit::singleline(&mut state.middle_position_y_string));
                             });
-                            if state.middle_position_string_parsing_error {
-                                ui.label("Algo aqui não é ponto flutuante!");
+                            ui.horizontal(|ui| {
+                                ui.label("R:");
+                                ui.add(egui::TextEdit::singleline(&mut state.middle_color_r_string));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("G:");
+                                ui.add(egui::TextEdit::singleline(&mut state.middle_color_g_string));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("B:");
+                                ui.add(egui::TextEdit::singleline(&mut state.middle_color_b_string));
+                            });
+                            if state.middle_vertex_string_parsing_error {
+                                ui.label("Algo aqui não está certo!");
                             }
                             ui.horizontal(|ui| {
                                 if ui.button("Aplicar").clicked() {
                                     if let (
                                         Ok(mut xp),
                                         Ok(mut yp),
+                                        Ok(rc),
+                                        Ok(gc),
+                                        Ok(bc),
                                     ) = (
                                         state.middle_position_x_string.parse::<f32>(),
                                         state.middle_position_y_string.parse::<f32>(),
+                                        state.middle_color_r_string.parse::<u8>(),
+                                        state.middle_color_g_string.parse::<u8>(),
+                                        state.middle_color_b_string.parse::<u8>(),
                                     ) {
                                         if xp >= WIDTH {
                                             xp = WIDTH - 1.0;
@@ -253,16 +346,22 @@ fn update_ui(
                                         }
                                         triangle.middle.position[0] = xp;
                                         triangle.middle.position[1] = yp;
+                                        triangle.middle.color[0] = rc;
+                                        triangle.middle.color[1] = gc;
+                                        triangle.middle.color[2] = bc;
                                         triangle.redraw = true;
                                         state.spawn_vertex_selectors = true;
-                                        state.middle_position_string_parsing_error = false;
+                                        state.middle_vertex_string_parsing_error = false;
                                     } else {
-                                        state.middle_position_string_parsing_error = true;
+                                        state.middle_vertex_string_parsing_error = true;
                                     }
                                 }
                                 if ui.button("Restaurar").clicked() {
                                     state.middle_position_x_string = triangle.middle.position[0].to_string();
                                     state.middle_position_y_string = triangle.middle.position[1].to_string();
+                                    state.middle_color_r_string = triangle.middle.color[0].to_string();
+                                    state.middle_color_g_string = triangle.middle.color[1].to_string();
+                                    state.middle_color_b_string = triangle.middle.color[2].to_string();
                                 }
                             });
 
@@ -277,17 +376,35 @@ fn update_ui(
                                 ui.label("Y:");
                                 ui.add(egui::TextEdit::singleline(&mut state.last_position_y_string));
                             });
-                            if state.last_position_string_parsing_error {
-                                ui.label("Algo aqui não é ponto flutuante!");
+                            ui.horizontal(|ui| {
+                                ui.label("R:");
+                                ui.add(egui::TextEdit::singleline(&mut state.last_color_r_string));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("G:");
+                                ui.add(egui::TextEdit::singleline(&mut state.last_color_g_string));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("B:");
+                                ui.add(egui::TextEdit::singleline(&mut state.last_color_b_string));
+                            });
+                            if state.last_vertex_string_parsing_error {
+                                ui.label("Algo aqui não está certo!");
                             }
                             ui.horizontal(|ui| {
                                 if ui.button("Aplicar").clicked() {
                                     if let (
                                         Ok(mut xp),
                                         Ok(mut yp),
+                                        Ok(rc),
+                                        Ok(gc),
+                                        Ok(bc),
                                     ) = (
                                         state.last_position_x_string.parse::<f32>(),
                                         state.last_position_y_string.parse::<f32>(),
+                                        state.last_color_r_string.parse::<u8>(),
+                                        state.last_color_g_string.parse::<u8>(),
+                                        state.last_color_b_string.parse::<u8>(),
                                     ) {
                                         if xp >= WIDTH {
                                             xp = WIDTH - 1.0;
@@ -305,16 +422,22 @@ fn update_ui(
                                         }
                                         triangle.last.position[0] = xp;
                                         triangle.last.position[1] = yp;
+                                        triangle.last.color[0] = rc;
+                                        triangle.last.color[1] = gc;
+                                        triangle.last.color[2] = bc;
                                         triangle.redraw = true;
                                         state.spawn_vertex_selectors = true;
-                                        state.last_position_string_parsing_error = false;
+                                        state.last_vertex_string_parsing_error = false;
                                     } else {
-                                        state.last_position_string_parsing_error = true;
+                                        state.last_vertex_string_parsing_error = true;
                                     }
                                 }
                                 if ui.button("Restaurar").clicked() {
                                     state.last_position_x_string = triangle.last.position[0].to_string();
                                     state.last_position_y_string = triangle.last.position[1].to_string();
+                                    state.last_color_r_string = triangle.last.color[0].to_string();
+                                    state.last_color_g_string = triangle.last.color[1].to_string();
+                                    state.last_color_b_string = triangle.last.color[2].to_string();
                                 }
                             });
                         });
@@ -389,9 +512,9 @@ fn spawn_vertex_selectors(
                         MaterialMesh2dBundle {
                             mesh: meshes.add(shape::Circle::new(7.0).into()).into(),
                             material: materials.add(ColorMaterial::from(Color::Rgba { 
-                                red: vertex.color[0], 
-                                green: vertex.color[1], 
-                                blue: vertex.color[2], 
+                                red: vertex.color[0] as f32 / 255.0, 
+                                green: vertex.color[1] as f32 / 255.0, 
+                                blue: vertex.color[2] as f32 / 255.0, 
                                 alpha: 1.0, 
                             })),
                             transform: Transform::from_translation(Vec3::new(
@@ -459,9 +582,9 @@ fn spawn_vertex_selectors(
                             }
                         ).into()).into(),
                         material: materials.add(ColorMaterial::from(Color::Rgba { 
-                            red: triangle.first.color[0], 
-                            green: triangle.first.color[1], 
-                            blue: triangle.first.color[2], 
+                            red: triangle.first.color[0] as f32 / 255.0, 
+                            green: triangle.first.color[1] as f32 / 255.0, 
+                            blue: triangle.first.color[2] as f32 / 255.0, 
                             alpha: 1.0, 
                         })),
                         transform: Transform::from_translation(Vec3::new(
@@ -522,9 +645,9 @@ fn spawn_vertex_selectors(
                             }
                         ).into()).into(),
                         material: materials.add(ColorMaterial::from(Color::Rgba { 
-                            red: triangle.middle.color[0], 
-                            green: triangle.middle.color[1], 
-                            blue: triangle.middle.color[2], 
+                            red: triangle.middle.color[0] as f32 / 255.0, 
+                            green: triangle.middle.color[1] as f32 / 255.0, 
+                            blue: triangle.middle.color[2] as f32 / 255.0, 
                             alpha: 1.0, 
                         })),
                         transform: Transform::from_translation(Vec3::new(
@@ -585,9 +708,9 @@ fn spawn_vertex_selectors(
                             }
                         ).into()).into(),
                         material: materials.add(ColorMaterial::from(Color::Rgba { 
-                            red: triangle.last.color[0], 
-                            green: triangle.last.color[1], 
-                            blue: triangle.last.color[2], 
+                            red: triangle.last.color[0] as f32 / 255.0, 
+                            green: triangle.last.color[1] as f32 / 255.0, 
+                            blue: triangle.last.color[2] as f32 / 255.0, 
                             alpha: 1.0, 
                         })),
                         transform: Transform::from_translation(Vec3::new(
