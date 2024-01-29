@@ -5,10 +5,10 @@ use bevy::{
 };
 use bevy_egui::EguiContexts;
 
-use crate::{constants::{HEIGHT, WIDTH}, state::{
+use crate::state::{
     Function,
     State,
-}};
+};
 
 pub struct TrianglesPlugin;
 
@@ -101,32 +101,14 @@ fn creating(
                 index: state.triangles_count,
             };
 
-            state.first_position_x_string = format!(
-                "{}",
-                triangle.first.position[0],
-            );
-            state.first_position_y_string = format!(
-                "{}",
-                triangle.first.position[1],
-            );
+            state.first_position_x_string = triangle.first.position[0].to_string();
+            state.first_position_y_string = triangle.first.position[1].to_string();
 
-            state.middle_position_x_string = format!(
-                "{}",
-                triangle.middle.position[0],
-            );
-            state.middle_position_y_string = format!(
-                "{}",
-                triangle.middle.position[1],
-            );
+            state.middle_position_x_string = triangle.middle.position[0].to_string();
+            state.middle_position_y_string = triangle.middle.position[1].to_string();
 
-            state.last_position_x_string = format!(
-                "{}",
-                triangle.last.position[0],
-            );
-            state.last_position_y_string = format!(
-                "{}",
-                triangle.last.position[1],
-            );
+            state.last_position_x_string = triangle.last.position[0].to_string();
+            state.last_position_y_string = triangle.last.position[1].to_string();
 
             let entity = commands.spawn((
                 triangle,
@@ -208,40 +190,22 @@ fn modifying(
                             triangle.first.position[0] = cursor_position.x;
                             triangle.first.position[1] = window.height() - cursor_position.y;
 
-                            state.first_position_x_string = format!(
-                                "{}",
-                                triangle.first.position[0],
-                            );
-                            state.first_position_y_string = format!(
-                                "{}",
-                                triangle.first.position[1],
-                            );
+                            state.first_position_x_string = triangle.first.position[0].to_string();
+                            state.first_position_y_string = triangle.first.position[1].to_string();
                         }
                         VertexOrder::Middle => {
                             triangle.middle.position[0] = cursor_position.x;
                             triangle.middle.position[1] = window.height() - cursor_position.y;
-
-                            state.middle_position_x_string = format!(
-                                "{}",
-                                triangle.middle.position[0],
-                            );
-                            state.middle_position_y_string = format!(
-                                "{}",
-                                triangle.middle.position[1],
-                            );
+                
+                            state.middle_position_x_string = triangle.middle.position[0].to_string();
+                            state.middle_position_y_string = triangle.middle.position[1].to_string();
                         }
                         VertexOrder::Last => {
                             triangle.last.position[0] = cursor_position.x;
                             triangle.last.position[1] = window.height() - cursor_position.y;
 
-                            state.last_position_x_string = format!(
-                                "{}",
-                                triangle.last.position[0],
-                            );
-                            state.last_position_y_string = format!(
-                                "{}",
-                                triangle.last.position[1],
-                            );
+                            state.last_position_x_string = triangle.last.position[0].to_string();
+                            state.last_position_y_string = triangle.last.position[1].to_string();
                         }
                     };
 
@@ -299,8 +263,8 @@ fn redrawing(
 
             let mut image = Image::new_fill(
                 Extent3d {
-                    width: WIDTH as u32,
-                    height: HEIGHT as u32,
+                    width: window.width() as u32,
+                    height: window.height() as u32,
                     depth_or_array_layers: 1,
                 },
                 TextureDimension::D2,
@@ -356,32 +320,14 @@ fn selecting(
                         state.function = Function::Modify(entity);
                         state.spawn_vertex_selectors = true;
 
-                        state.first_position_x_string = format!(
-                            "{}",
-                            triangle.first.position[0],
-                        );
-                        state.first_position_y_string = format!(
-                            "{}",
-                            triangle.first.position[1],
-                        );
+                        state.first_position_x_string = triangle.first.position[0].to_string();
+                        state.first_position_y_string = triangle.first.position[1].to_string();
 
-                        state.middle_position_x_string = format!(
-                            "{}",
-                            triangle.middle.position[0],
-                        );
-                        state.middle_position_y_string = format!(
-                            "{}",
-                            triangle.middle.position[1],
-                        );
+                        state.middle_position_x_string = triangle.middle.position[0].to_string();
+                        state.middle_position_y_string = triangle.middle.position[1].to_string();
 
-                        state.last_position_x_string = format!(
-                            "{}",
-                            triangle.last.position[0],
-                        );
-                        state.last_position_y_string = format!(
-                            "{}",
-                            triangle.last.position[1],
-                        );
+                        state.last_position_x_string = triangle.last.position[0].to_string();
+                        state.last_position_y_string = triangle.last.position[1].to_string();
                     }
                 }
             }
@@ -396,7 +342,9 @@ fn render(
     width: usize,
     height: usize,
 ) {
-  
+    // --------------------
+    // desenha arestas
+    // --------------------
 
     for i in 0..3 {
         let (
@@ -447,6 +395,10 @@ fn render(
         }
     }
 
+    // --------------------
+    // pinta interior do triângulo
+    // --------------------
+
     let x_min = triangle.last.position[0].min(triangle.middle.position[0].min(triangle.first.position[0])).round() as usize;
     let x_max = triangle.last.position[0].max(triangle.middle.position[0].max(triangle.first.position[0])).round() as usize;
 
@@ -455,6 +407,10 @@ fn render(
 
     for i in y_min..=y_max {
         let i = height - i - 1;
+
+        // --------------------
+        // acha cor inicial e cor final
+        // --------------------
 
         let mut first_color: Option<[f32; 3]> = None;
         let mut first_color_j: usize = 0;
@@ -489,6 +445,10 @@ fn render(
             }
         }
 
+        // --------------------
+        // realiza algoritmo da scanline com aritmética incremental
+        // --------------------
+
         if let (Some(first_color), Some(last_color)) = (first_color, last_color) {
             let points_len = (last_color_j - first_color_j) as f32;
             let mut j = first_color_j + 1;
@@ -520,6 +480,11 @@ fn render(
 
 
 fn bresenham(x0: f32, y0: f32, x1: f32, y1: f32) -> Vec<(f32, f32)> {
+    let x0 = x0.round();
+    let y0 = y0.round();
+    let x1 = x1.round();
+    let y1 = y1.round();
+
     let mut result = Vec::new();
     
     let dx = (x1 - x0).abs();

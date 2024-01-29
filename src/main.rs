@@ -9,10 +9,13 @@ use bevy::{
     window::WindowTheme,
 };
 use bevy_egui::EguiPlugin;
-use constants::{HEIGHT, WIDTH};
 
 use crate::{
     camera::CameraPlugin,
+    constants::{
+        HEIGHT, 
+        WIDTH,
+    },
     state::StatePlugin,
     triangles::TrianglesPlugin,
     ui::UIPlugin,

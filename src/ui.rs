@@ -8,11 +8,19 @@ use bevy_egui::{
 };
 
 use crate::{
-    constants::{HEIGHT, WIDTH}, state::{
+    constants::{
+        HEIGHT, 
+        WIDTH,
+    }, 
+    state::{
         Function,
         State,
-    }, triangles::{
-        Triangle, TriangleSprite, VertexOrder, VertexSelector
+    }, 
+    triangles::{
+        Triangle, 
+        TriangleSprite, 
+        VertexOrder, 
+        VertexSelector,
     }
 };
 
@@ -155,17 +163,17 @@ fn update_ui(
                                     ) {
                                         if xp >= WIDTH {
                                             xp = WIDTH - 1.0;
-                                            state.first_position_x_string = format!("{}", xp);
+                                            state.first_position_x_string = xp.to_string();
                                         } else if xp < 0.0 {
                                             xp = 0.0;
-                                            state.first_position_x_string = format!("{}", xp);
+                                            state.first_position_x_string = xp.to_string();
                                         }
                                         if yp >= HEIGHT {
                                             yp = HEIGHT - 1.0;
-                                            state.first_position_y_string = format!("{}", yp);
+                                            state.first_position_y_string = yp.to_string();
                                         } else if yp < 0.0 {
                                             yp = 0.0;
-                                            state.first_position_y_string = format!("{}", yp);
+                                            state.first_position_y_string = yp.to_string();
                                         }
                                         triangle.first.position[0] = xp;
                                         triangle.first.position[1] = yp;
@@ -177,14 +185,8 @@ fn update_ui(
                                     }
                                 }
                                 if ui.button("Restaurar").clicked() {
-                                    state.first_position_x_string = format!(
-                                        "{}",
-                                        triangle.first.position[0],
-                                    );
-                                    state.first_position_y_string = format!(
-                                        "{}",
-                                        triangle.first.position[1],
-                                    );
+                                    state.first_position_x_string = triangle.first.position[0].to_string();
+                                    state.first_position_y_string = triangle.first.position[1].to_string();
                                 }
                             });
 
@@ -213,17 +215,17 @@ fn update_ui(
                                     ) {
                                         if xp >= WIDTH {
                                             xp = WIDTH - 1.0;
-                                            state.middle_position_x_string = format!("{}", xp);
+                                            state.middle_position_x_string = xp.to_string();
                                         } else if xp < 0.0 {
                                             xp = 0.0;
-                                            state.middle_position_x_string = format!("{}", xp);
+                                            state.middle_position_x_string = xp.to_string();
                                         }
                                         if yp >= HEIGHT {
                                             yp = HEIGHT - 1.0;
-                                            state.middle_position_y_string = format!("{}", yp);
+                                            state.middle_position_y_string = yp.to_string();
                                         } else if yp < 0.0 {
                                             yp = 0.0;
-                                            state.middle_position_y_string = format!("{}", yp);
+                                            state.middle_position_y_string = yp.to_string();
                                         }
                                         triangle.middle.position[0] = xp;
                                         triangle.middle.position[1] = yp;
@@ -235,14 +237,8 @@ fn update_ui(
                                     }
                                 }
                                 if ui.button("Restaurar").clicked() {
-                                    state.middle_position_x_string = format!(
-                                        "{}",
-                                        triangle.middle.position[0],
-                                    );
-                                    state.middle_position_y_string = format!(
-                                        "{}",
-                                        triangle.middle.position[1],
-                                    );
+                                    state.middle_position_x_string = triangle.middle.position[0].to_string();
+                                    state.middle_position_y_string = triangle.middle.position[1].to_string();
                                 }
                             });
 
@@ -271,17 +267,17 @@ fn update_ui(
                                     ) {
                                         if xp >= WIDTH {
                                             xp = WIDTH - 1.0;
-                                            state.last_position_x_string = format!("{}", xp);
+                                            state.last_position_x_string = xp.to_string();
                                         } else if xp < 0.0 {
                                             xp = 0.0;
-                                            state.last_position_x_string = format!("{}", xp);
+                                            state.last_position_x_string = xp.to_string();
                                         }
                                         if yp >= HEIGHT {
                                             yp = HEIGHT - 1.0;
-                                            state.last_position_y_string = format!("{}", yp);
+                                            state.last_position_y_string = yp.to_string();
                                         } else if yp < 0.0 {
                                             yp = 0.0;
-                                            state.last_position_y_string = format!("{}", yp);
+                                            state.last_position_y_string = yp.to_string();
                                         }
                                         triangle.last.position[0] = xp;
                                         triangle.last.position[1] = yp;
@@ -293,14 +289,8 @@ fn update_ui(
                                     }
                                 }
                                 if ui.button("Restaurar").clicked() {
-                                    state.last_position_x_string = format!(
-                                        "{}",
-                                        triangle.last.position[0],
-                                    );
-                                    state.last_position_y_string = format!(
-                                        "{}",
-                                        triangle.last.position[1],
-                                    );
+                                    state.last_position_x_string = triangle.last.position[0].to_string();
+                                    state.last_position_y_string = triangle.last.position[1].to_string();
                                 }
                             });
                         });
