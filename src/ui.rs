@@ -68,6 +68,12 @@ fn update_ui(
                         ui.color_edit_button_rgb(&mut state.vertex_color_picker);
                     });
                     ui.separator();
+                    ui.checkbox(&mut state.constant_edges, "Arestas com cor constante");
+                    ui.horizontal( |ui| {
+                        ui.label("Cor:");
+                        ui.color_edit_button_rgb(&mut state.edges_color_picker);
+                    });
+                    ui.separator();
                     if ui.add(egui::Button::new("Voltar")).clicked() {
                         for (entity, _) in vertex_selector_query.iter() {
                             commands.entity(entity).despawn();
