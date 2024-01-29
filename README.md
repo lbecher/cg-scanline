@@ -1,5 +1,7 @@
 # cg-scanline
 
+Primeiro trabalho de implementação da disciplina de Computação Gráfica.
+
 ## Execução
 
 Na pasta raiz do projeto (que contém o arquivo `Cargo.toml`), execute o comando:
