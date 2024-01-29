@@ -45,6 +45,7 @@ pub struct Triangle {
     pub last: Vertex,
     pub redraw: bool,
     pub index: usize,
+    pub edges_color: Option<[f32; 3]>,
 }
 
 #[derive(Component)]
@@ -75,7 +76,7 @@ fn creating(
                         window.height() - cursor_position.y,
                         (state.triangles_count - 1) as f32,
                     ];
-                    let color: [f32; 3] = state.color_picker.clone();
+                    let color: [f32; 3] = state.vertex_color_picker.clone();
 
                     state.new_triangle.push(Vertex {
                         position,
@@ -99,6 +100,11 @@ fn creating(
                 last: state.new_triangle.remove(0),
                 redraw: true,
                 index: state.triangles_count,
+                edges_color: if state.constant_edges {
+                    Some(state.edges_color_picker)
+                } else {
+                    None
+                },
             };
 
             state.first_position_x_string = triangle.first.position[0].to_string();
@@ -152,15 +158,15 @@ fn modifying(
 
                         match vertex_selector.0 {
                             VertexOrder::First => {
-                                triangle.first.color = state.color_picker;
+                                triangle.first.color = state.vertex_color_picker;
                                 triangle.redraw = true;
                             }
                             VertexOrder::Middle => {
-                                triangle.middle.color = state.color_picker;
+                                triangle.middle.color = state.vertex_color_picker;
                                 triangle.redraw = true;
                             }
                             VertexOrder::Last => {
-                                triangle.last.color = state.color_picker;
+                                triangle.last.color = state.vertex_color_picker;
                                 triangle.redraw = true;
                             }
                         }
@@ -342,8 +348,10 @@ fn render(
     width: usize,
     height: usize,
 ) {
+    let mut edges: Vec<Vec<(f32, f32)>> = Vec::new();
+
     // --------------------
-    // desenha arestas
+    // pinta arestas
     // --------------------
 
     for i in 0..3 {
@@ -373,16 +381,21 @@ fn render(
         let y1 = v1.position[1];
 
         let points = bresenham(x0, y0, x1, y1);
+        edges.push(points.clone());
         let points_len = points.len() as f32;
 
-        let mut count: f32 = 0.0;
+        let tr = (v1.color[0] - v0.color[0]) / points_len;
+        let tg = (v1.color[1] - v0.color[1]) / points_len;
+        let tb = (v1.color[2] - v0.color[2]) / points_len;
+
+        let mut r = v0.color[0];
+        let mut g = v0.color[1];
+        let mut b = v0.color[2];
+
         for (x, y) in points {
-            let blend_factor = count / points_len;
-            count += 1.0;
-    
-            let r = v0.color[0] + blend_factor * (v1.color[0] - v0.color[0]);
-            let g = v0.color[1] + blend_factor * (v1.color[1] - v0.color[1]);
-            let b = v0.color[2] + blend_factor * (v1.color[2] - v0.color[2]);
+            r += tr;
+            g += tg;
+            b += tb;
     
             let i = height - (y.round() as usize) - 1;
             let j = x.round() as usize;
@@ -473,6 +486,29 @@ fn render(
                 image[index + 3] = 255;
 
                 j += 1;
+            }
+        }
+    }
+
+    // --------------------
+    // pinta as arestas com uma cor constante caso possua
+    // --------------------
+
+    if let Some(edges_color) = triangle.edges_color {
+        for points in edges {
+            for (x, y) in points {        
+                let r = edges_color[0];
+                let g = edges_color[1];
+                let b = edges_color[2];
+        
+                let i = height - (y.round() as usize) - 1;
+                let j = x.round() as usize;
+                let index = (i * width + j) * 4;
+    
+                image[index] = (r * 255.0) as u8;
+                image[index + 1] = (g * 255.0) as u8;
+                image[index + 2] = (b * 255.0) as u8;
+                image[index + 3] = 255;
             }
         }
     }

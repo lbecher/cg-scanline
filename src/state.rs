@@ -25,7 +25,9 @@ pub enum Function {
 pub struct State {
     pub function: Function,
     pub selected_vertex: Option<VertexOrder>,
-    pub color_picker: [f32; 3],
+    pub vertex_color_picker: [f32; 3],
+    pub edges_color_picker: [f32; 3],
+    pub constant_edges: bool,
     pub new_triangle: Vec<Vertex>,
     pub spawn_vertex_selectors: bool,
     pub triangles_count: usize,
@@ -49,7 +51,9 @@ fn setup_state(
 ) {
     commands.insert_resource(State {
         function: Function::None,
-        color_picker: [1.0, 0.0, 0.0],
+        vertex_color_picker: [1.0, 0.0, 0.0],
+        edges_color_picker: [0.0, 0.0, 0.0],
+        constant_edges: false,
         new_triangle: Vec::new(),
         spawn_vertex_selectors: false,
         selected_vertex: None,

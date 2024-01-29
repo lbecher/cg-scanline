@@ -65,7 +65,7 @@ fn update_ui(
                     ui.label("Use o seletor de cor abaixo para escolher a cor dos vértices.");
                     ui.horizontal( |ui| {
                         ui.label("Cor:");
-                        ui.color_edit_button_rgb(&mut state.color_picker);
+                        ui.color_edit_button_rgb(&mut state.vertex_color_picker);
                     });
                     ui.separator();
                     if ui.add(egui::Button::new("Voltar")).clicked() {
@@ -84,8 +84,8 @@ fn update_ui(
                     }
                 }
                 Function::Modify(entity) => {
-                    if let Ok(triangle) = triangles_query.get(entity) {
-                        ui.label(format!("Você está editando {}º triângulo.", triangle.index));
+                    if let Ok(mut triangle) = triangles_query.get_mut(entity) {
+                        ui.label(format!("Você está editando 0 triângulo {}.", triangle.index));
 
                         ui.separator();
 
@@ -96,8 +96,25 @@ fn update_ui(
                         ui.label("Para atribuir a cor abaixo, clique com o botão direito do mouse sobre um seletor.");
                         ui.horizontal( |ui| {
                             ui.label("Cor:");
-                            ui.color_edit_button_rgb(&mut state.color_picker);
+                            ui.color_edit_button_rgb(&mut state.vertex_color_picker);
                         });
+
+                        ui.separator();
+
+                        let mut edges_color_changed = false;
+                        let constant_edges_changed = ui.checkbox(&mut state.constant_edges, "Arestas com cor constante").changed();
+                        ui.horizontal( |ui| {
+                            ui.label("Cor:");
+                            edges_color_changed = ui.color_edit_button_rgb(&mut state.edges_color_picker).changed();
+                        });
+                        if constant_edges_changed || edges_color_changed {
+                            if state.constant_edges {
+                                triangle.edges_color = Some(state.edges_color_picker);
+                            } else {
+                                triangle.edges_color = None;
+                            }
+                            triangle.redraw = true;
+                        }
 
                         ui.separator();
 
@@ -111,6 +128,7 @@ fn update_ui(
                                     commands.entity(entity).despawn();
                                 }
                                 state.function = Function::None;
+                                state.constant_edges = false;
                             }
                             if ui.add(egui::Button::new("Deletar")).clicked() {
                                 // despawna seletores
