@@ -382,7 +382,9 @@ fn selecting(
                         if let Some(edges_color) = triangle.edges_color {
                             state.edges_color_r_string = edges_color[0].to_string();
                             state.edges_color_g_string = edges_color[1].to_string();
-                            state.edges_color_b_string = edges_color[2].to_string();     
+                            state.edges_color_b_string = edges_color[2].to_string();
+
+                            state.constant_edges = true;
                         }
                     }
                 }
