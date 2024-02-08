@@ -49,7 +49,7 @@ pub struct Triangle {
 }
 
 #[derive(Component)]
-pub struct TriangleSprite(pub Option<Entity>);
+pub struct TriangleSprite(pub Option<Entity>); // entity do SpriteBundle
 
 
 fn creating(
@@ -433,13 +433,13 @@ fn render(
         let x1 = v1.position[0];
         let y1 = v1.position[1];
 
-        let r0 = v0.color[0] as f32 / 255.0;
-        let g0 = v0.color[1] as f32 / 255.0;
-        let b0 = v0.color[2] as f32 / 255.0;
+        let r0 = v0.color[0] as f32;
+        let g0 = v0.color[1] as f32;
+        let b0 = v0.color[2] as f32;
 
-        let r1 = v1.color[0] as f32 / 255.0;
-        let g1 = v1.color[1] as f32 / 255.0;
-        let b1 = v1.color[2] as f32 / 255.0;
+        let r1 = v1.color[0] as f32;
+        let g1 = v1.color[1] as f32;
+        let b1 = v1.color[2] as f32;
 
         let points = bresenham(x0, y0, x1, y1);
         edges.push(points.clone());
@@ -462,9 +462,9 @@ fn render(
             let j = x.round() as usize;
             let index = (i * width + j) * 4;
 
-            image[index] = (r * 255.0) as u8;
-            image[index + 1] = (g * 255.0) as u8;
-            image[index + 2] = (b * 255.0) as u8;
+            image[index] = r.round() as u8;
+            image[index + 1] = g.round() as u8;
+            image[index + 2] = b.round() as u8;
             image[index + 3] = 255;
         }
     }
@@ -500,9 +500,9 @@ fn render(
             if image[index + 3] > 0 && after_first_line == false {
                 first_color = Some(
                     [
-                        image[index] as f32 / 255.0,
-                        image[index + 1] as f32 / 255.0,
-                        image[index + 2] as f32 / 255.0,
+                        image[index] as f32,
+                        image[index + 1] as f32,
+                        image[index + 2] as f32,
                     ]
                 );
                 first_color_j = j;
@@ -511,9 +511,9 @@ fn render(
             } else if image[index + 3] > 0 && after_first_line == true && first_color.is_some() {
                 last_color = Some(
                     [
-                        image[index] as f32 / 255.0,
-                        image[index + 1] as f32 / 255.0,
-                        image[index + 2] as f32 / 255.0,
+                        image[index] as f32,
+                        image[index + 1] as f32,
+                        image[index + 2] as f32,
                     ]
                 );
                 last_color_j = j;
@@ -543,9 +543,9 @@ fn render(
                 b += tb;
 
                 let index = (i * width + j) * 4;
-                image[index] = (r * 255.0) as u8;
-                image[index + 1] = (g * 255.0) as u8;
-                image[index + 2] = (b * 255.0) as u8;
+                image[index] = r.round() as u8;
+                image[index + 1] = g.round() as u8;
+                image[index + 2] = b.round() as u8;
                 image[index + 3] = 255;
 
                 j += 1;

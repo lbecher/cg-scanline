@@ -23,6 +23,7 @@ use crate::{
 
 fn main() {
     App::new()
+        //.insert_resource(ClearColor(Color::WHITE))
         .add_plugins(DefaultPlugins
             .set(ImagePlugin::default_nearest())
             .set(WindowPlugin {
